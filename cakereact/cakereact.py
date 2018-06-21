@@ -19,5 +19,5 @@ class CakeReact:
             await message.add_reaction('🍰')
         if ('cookie' in message.content.lower()) or ('biscuit' in message.content.lower()):
             await message.add_reaction('🍪')
-        if 'fix' in message.content.lower():
-            await message.add_reaction('<:lilfix:445057492834189322>')
+        if ('fix it' in message.content.lower()) or ('lil fix' in message.content.lower()):
+            await message.add_reaction(':lilfix:445057492834189322')
