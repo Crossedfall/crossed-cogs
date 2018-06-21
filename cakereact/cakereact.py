@@ -17,3 +17,5 @@ class CakeReact:
             return
         if 'cake' in message.content.lower():
             await message.add_reaction('🍰')
+        if ('cookie' in message.content.lower()) or ('biscuit' in message.content.lower()):
+            await message.add_reaction('🍪')
