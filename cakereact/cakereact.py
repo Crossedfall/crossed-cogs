@@ -2,7 +2,7 @@
 import asyncio
 
 #Discord Imports
-from discord.ext import commands
+from redbot.core import commands
 
 __version__ = "1.0.0"
 __author__ = "Crossedfall"
