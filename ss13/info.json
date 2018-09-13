@@ -1,0 +1,8 @@
+{
+    "author" : "Crossedfall (Crossedfall#1001)",
+    "install_msg" : "This cog is still in production, you have been warned!",
+    "name" : "SS13 Helper",
+    "short" : "Provides bot functionality for SS13 servers!",
+    "description" : "Allows for ahelp notification and round start/status notifications",
+    "tags" : ["Space Station 13", "Game", "Administration", "Utility", "SS13"]
+}
