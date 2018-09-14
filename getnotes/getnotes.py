@@ -5,25 +5,15 @@ import mysql.connector
 import socket
 
 #Discord Imports
+import discord
+
+#Redbot Imports
 from redbot.core import commands, checks, Config, utils
 
 __version__ = "0.0.1"
 __author__ = "Crossedfall"
 
-def is_admin():
-    """
-    check for administrator/owner perms
-    """
-    async def pred(ctx: commands.Context):
-        author = ctx.author
-        if await ctx.bot.is_owner(author):
-            return True
-        else:
-            return author == ctx.guild.owner or author.guild.permissions.administrator
-
-    return commands.check(pred)
-
-class SS13:
+class GetNotes:
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, 3257143194, force_registration=True)
@@ -39,7 +29,7 @@ class SS13:
         self.config.register_guild(**default_guild)
     
     @commands.guild_only()
-    @is_admin()
+    @checks.is_owner()
     @commands.group(autohelp=True)
     async def setdatabase(self,ctx):
         """
@@ -48,7 +38,7 @@ class SS13:
         pass
     
     @setdatabase.command()
-    @is_admin()
+    @checks.is_owner()
     async def host(self, ctx, db_host: str):
         """
         Sets the MySQL host, defaults to localhost (127.0.0.1)
@@ -57,11 +47,11 @@ class SS13:
             socket.inet_aton(db_host)
             await self.config.guild(ctx.guild).mysql_host.set(db_host)
             await ctx.send(f"Database host set to: {db_host}")
-        except:
+        except(AttributeError, OSError):
             await ctx.send(f"{db_host} is not a valid ip address!")
     
     @setdatabase.command()
-    @is_admin()
+    @checks.is_owner()
     async def port(self, ctx, db_port: int):
         """
         Sets the MySQL port, defaults to 3306
@@ -75,8 +65,8 @@ class SS13:
         except (ValueError, KeyError, AttributeError):
             pass 
     
-    @setdatabase.command()
-    @is_admin()
+    @setdatabase.command(aliases=['name'])
+    @checks.is_owner()
     async def username(self,ctx,user: str):
         """
         Sets the user that will be used with the MySQL database. Defaults to SS13
@@ -90,7 +80,7 @@ class SS13:
             pass
     
     @setdatabase.command()
-    @is_admin()
+    @checks.is_owner()
     async def password(self,ctx,passwd: str):
         """
         Sets the password for connecting to the database
@@ -98,13 +88,13 @@ class SS13:
         This will be stored locally, it is recommended to ensure that your user cannot write to the database
         """
         try:
-            await self.config.guild(ctx.guild).mysql_user.set(passwd)
+            await self.config.guild(ctx.guild).mysql_password.set(passwd)
             await ctx.send("Your password has been set.")
         except (ValueError, KeyError, AttributeError):
             pass
 
     @setdatabase.command()
-    @is_admin()
+    @checks.is_owner()
     async def database(self,ctx,db: str):
         """
         Sets the database to login to, defaults to feedback
@@ -114,3 +104,33 @@ class SS13:
             await ctx.send(f"Database set to: {db}")
         except (ValueError, KeyError, AttributeError):
             pass
+
+    @checks.mod_or_permissions(administrator=True)
+    @commands.group(autohelp=False)
+    async def notes(self, ctx, player: str):
+        """
+        Gets the notes for a specific player
+        """
+        db = await self.config.guild(ctx.guild).mysql_db()
+        db_host = await self.config.guild(ctx.guild).mysql_host()
+        db_port = await self.config.guild(ctx.guild).mysql_port()
+        db_user = await self.config.guild(ctx.guild).mysql_user()
+        db_pass = await self.config.guild(ctx.guild).mysql_password()
+        target = player.lower()
+
+        try:
+            conn = mysql.connector.connect(host=db_host,port=db_port,database=db,user=db_user,password=db_pass)
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute(f"SELECT timestamp, adminckey, text, type FROM messages WHERE targetckey='{target}'")
+            rows = cursor.fetchall()
+
+            embed=discord.Embed(title=f"Notes for: {target}", description=f"Total notes: {cursor.rowcount}", color=0xf1d592)
+            for row in rows:
+                embed.add_field(name=f'{row["timestamp"]} UTC-5 (Central Time) | {row["type"]} by {row["adminckey"]}',value=row["text"])
+            await ctx.send(embed=embed)
+
+        except():
+            await ctx.send(f"There was an error getting the notes for {target}")
+        finally:
+            cursor.close()
+            conn.close()
