@@ -2,7 +2,7 @@
     "author" : "Crossedfall (Crossedfall#1001)",
     "install_msg" : "This cog is still in production, you have been warned!",
     "name" : "SS13 Notes Helper",
-    "short" : "Obtains player notes and post them into discord on command!",
+    "short" : "Obtains player notes and posts them into discord on command!",
     "description" : "Pulls player notes from your database. TG Scheme required",
     "tags" : ["Space Station 13", "Game", "Administration", "Utility", "SS13"]
 }

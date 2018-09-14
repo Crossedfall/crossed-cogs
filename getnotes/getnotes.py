@@ -65,7 +65,7 @@ class GetNotes:
         except (ValueError, KeyError, AttributeError):
             pass 
     
-    @setdatabase.command(aliases=['name'])
+    @setdatabase.command(aliases=['name', 'user'])
     @checks.is_owner()
     async def username(self,ctx,user: str):
         """
@@ -93,7 +93,7 @@ class GetNotes:
         except (ValueError, KeyError, AttributeError):
             pass
 
-    @setdatabase.command()
+    @setdatabase.command(aliases=["db"])
     @checks.is_owner()
     async def database(self,ctx,db: str):
         """
@@ -117,6 +117,8 @@ class GetNotes:
         db_user = await self.config.guild(ctx.guild).mysql_user()
         db_pass = await self.config.guild(ctx.guild).mysql_password()
         target = player.lower()
+        cursor = None
+        conn = None
 
         try:
             conn = mysql.connector.connect(host=db_host,port=db_port,database=db,user=db_user,password=db_pass)
@@ -132,5 +134,7 @@ class GetNotes:
         except():
             await ctx.send(f"There was an error getting the notes for {target}")
         finally:
-            cursor.close()
-            conn.close()
+            if cursor is not None:
+                cursor.close()  
+            if conn is not None:
+                conn.close()
