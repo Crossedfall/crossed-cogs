@@ -10,7 +10,7 @@ import discord
 #Redbot Imports
 from redbot.core import commands, checks, Config, utils
 
-__version__ = "0.0.1"
+__version__ = "1.0.0"
 __author__ = "Crossedfall"
 
 class GetNotes:
@@ -29,7 +29,6 @@ class GetNotes:
         self.config.register_guild(**default_guild)
     
     @commands.guild_only()
-    @checks.is_owner()
     @commands.group(autohelp=True)
     async def setdatabase(self,ctx):
         """
@@ -104,6 +103,19 @@ class GetNotes:
             await ctx.send(f"Database set to: {db}")
         except (ValueError, KeyError, AttributeError):
             pass
+    
+    @setdatabase.command()
+    @checks.admin_or_permissions(administrator=True)
+    async def current(self,ctx):
+        settings = await self.config.guild(ctx.guild).all()
+        embed=discord.Embed(title="__Current settings:__")
+        for k, v in settings.items():
+            if k is not "mysql_password":
+                embed.add_field(name=f"{k}:",value=v,inline=False)
+            else:
+                embed.add_field(name=f"{k}:",value="`redacted`",inline=False)
+        await ctx.send(embed=embed)
+
 
     @checks.mod_or_permissions(administrator=True)
     @commands.group(autohelp=False)
