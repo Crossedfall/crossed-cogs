@@ -28,14 +28,14 @@ class GetNotes:
         self.config.register_guild(**default_guild)
     
     @commands.guild_only()
-    @commands.group(autohelp=True)
-    async def setdatabase(self,ctx):
+    @commands.group()
+    async def setnotesdatabase(self,ctx):
         """
         SS13 MySQL databse settings
         """
         pass
     
-    @setdatabase.command()
+    @setnotesdatabase.command()
     @checks.is_owner()
     async def host(self, ctx, db_host: str):
         """
@@ -48,7 +48,7 @@ class GetNotes:
         except(AttributeError, OSError):
             await ctx.send(f"{db_host} is not a valid ip address!")
     
-    @setdatabase.command()
+    @setnotesdatabase.command()
     @checks.is_owner()
     async def port(self, ctx, db_port: int):
         """
@@ -61,9 +61,9 @@ class GetNotes:
             else:
                 await ctx.send(f"{db_port} is not a valid port!")
         except (ValueError, KeyError, AttributeError):
-            pass 
+            await ctx.send("There was a problem setting your port. Please check to ensure you're attempting to use a port from 1024 to 65535") 
     
-    @setdatabase.command(aliases=['name', 'user'])
+    @setnotesdatabase.command(aliases=['name', 'user'])
     @checks.is_owner()
     async def username(self,ctx,user: str):
         """
@@ -75,9 +75,9 @@ class GetNotes:
             await self.config.guild(ctx.guild).mysql_user.set(user)
             await ctx.send(f"User set to: {user}")
         except (ValueError, KeyError, AttributeError):
-            pass
+            await ctx.send("There was a problem setting the username for your database.")
     
-    @setdatabase.command()
+    @setnotesdatabase.command()
     @checks.is_owner()
     async def password(self,ctx,passwd: str):
         """
@@ -89,9 +89,9 @@ class GetNotes:
             await self.config.guild(ctx.guild).mysql_password.set(passwd)
             await ctx.send("Your password has been set.")
         except (ValueError, KeyError, AttributeError):
-            pass
+            await ctx.send("There was a problem setting the password for your database.")
 
-    @setdatabase.command(aliases=["db"])
+    @setnotesdatabase.command(aliases=["db"])
     @checks.is_owner()
     async def database(self,ctx,db: str):
         """
@@ -101,11 +101,14 @@ class GetNotes:
             await self.config.guild(ctx.guild).mysql_db.set(db)
             await ctx.send(f"Database set to: {db}")
         except (ValueError, KeyError, AttributeError):
-            pass
+            await ctx.send ("There was a problem setting your notes database.")
     
-    @setdatabase.command()
+    @setnotesdatabase.command()
     @checks.admin_or_permissions(administrator=True)
     async def current(self,ctx):
+        """
+        Gets the current settings for the notes database
+        """
         settings = await self.config.guild(ctx.guild).all()
         embed=discord.Embed(title="__Current settings:__")
         for k, v in settings.items():
