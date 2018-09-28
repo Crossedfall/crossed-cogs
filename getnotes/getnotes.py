@@ -2,6 +2,7 @@
 import asyncio
 import mysql.connector
 import socket
+import ipaddress
 
 #Discord Imports
 import discord
@@ -42,10 +43,10 @@ class GetNotes:
         Sets the MySQL host, defaults to localhost (127.0.0.1)
         """
         try:
-            socket.inet_aton(db_host)
+            ipaddress.ip_address(db_host)
             await self.config.guild(ctx.guild).mysql_host.set(db_host)
             await ctx.send(f"Database host set to: {db_host}")
-        except(AttributeError, OSError):
+        except(ValueError):
             await ctx.send(f"{db_host} is not a valid ip address!")
     
     @setnotesdatabase.command()
