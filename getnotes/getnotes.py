@@ -46,7 +46,7 @@ class GetNotes(BaseCog):
         Sets the MySQL host, defaults to localhost (127.0.0.1)
         """
         try:
-            ipaddress.ip_address(db_host)
+            ipaddress.ip_address(db_host) # Confirms that the IP provided is valid. If the IP is not valid, a ValueError is thrown.
             await self.config.guild(ctx.guild).mysql_host.set(db_host)
             await ctx.send(f"Database host set to: {db_host}")
         except(ValueError):
@@ -59,7 +59,7 @@ class GetNotes(BaseCog):
         Sets the MySQL port, defaults to 3306
         """
         try:
-            if 1024 <= db_port <= 65535:
+            if 1024 <= db_port <= 65535: # We don't want to allow reserved ports to be set
                 await self.config.guild(ctx.guild).mysql_port.set(db_port)
                 await ctx.send(f"Database port set to: {db_port}")
             else:
@@ -116,7 +116,7 @@ class GetNotes(BaseCog):
         settings = await self.config.guild(ctx.guild).all()
         embed=discord.Embed(title="__Current settings:__")
         for k, v in settings.items():
-            if k is not "mysql_password":
+            if k is not "mysql_password": # Ensures that the database password is not sent
                 embed.add_field(name=f"{k}:",value=v,inline=False)
             else:
                 embed.add_field(name=f"{k}:",value="`redacted`",inline=False)
@@ -129,28 +129,34 @@ class GetNotes(BaseCog):
         """
         Gets the notes for a specific player
         """
+        # Database options loaded from the config
         db = await self.config.guild(ctx.guild).mysql_db()
         db_host = await self.config.guild(ctx.guild).mysql_host()
         db_port = await self.config.guild(ctx.guild).mysql_port()
         db_user = await self.config.guild(ctx.guild).mysql_user()
         db_pass = await self.config.guild(ctx.guild).mysql_password()
+
         target = player.lower()
-        cursor = None
-        conn = None
+        cursor = None # Since the cursor/conn variables can't actually be closed if the connection isn't properly established we set a None type here
+        conn = None # ^
 
         try:
+            # Establish a connection with the database and pull the relevant data
             conn = mysql.connector.connect(host=db_host,port=db_port,database=db,user=db_user,password=db_pass)
             cursor = conn.cursor(dictionary=True)
             cursor.execute(f"SELECT timestamp, adminckey, text, type FROM messages WHERE targetckey='{target}'")
             rows = cursor.fetchall()
 
+            # Parse the data into individual fields within an embeded message in Discord for ease of viewing
             embed=discord.Embed(title=f"Notes for: {target}", description=f"Total notes: {cursor.rowcount}", color=0xf1d592)
             for row in rows:
                 embed.add_field(name=f'{row["timestamp"]} UTC-5 (Central Time) | {row["type"]} by {row["adminckey"]}',value=row["text"])
             await ctx.send(embed=embed)
 
-        except():
-            await ctx.send(f"There was an error getting the notes for {target}")
+        except mysql.connector.Error as err:
+            embed=discord.Embed(title=f"Error looking up notes for: {target}", description=f"{format(err)}", color=0xff0000)
+            await ctx.send(embed=embed)
+
         finally:
             if cursor is not None:
                 cursor.close()  
