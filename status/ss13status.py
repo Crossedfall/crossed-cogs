@@ -14,7 +14,9 @@ from redbot.core import commands, checks, Config, utils
 __version__ = "0.0.1"
 __author__ = "Crossedfall"
 
-class SS13Status:
+BaseCog = getattr(commands, "Cog", object)
+
+class SS13Status(BaseCog):
 
     def __init__(self, bot):
         self.bot = bot

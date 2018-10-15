@@ -13,7 +13,10 @@ from redbot.core import commands, checks, Config, utils
 __version__ = "1.0.0"
 __author__ = "Crossedfall"
 
-class GetNotes:
+
+BaseCog = getattr(commands, "Cog", object)
+
+class GetNotes(BaseCog):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, 3257143194, force_registration=True)
