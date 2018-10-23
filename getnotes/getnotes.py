@@ -1,7 +1,6 @@
 #Standard Imports
 import asyncio
 import mysql.connector
-import socket
 import ipaddress
 
 #Discord Imports

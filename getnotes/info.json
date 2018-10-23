@@ -1,6 +1,6 @@
 {
     "author": "Crossedfall (Crossedfall#1001)",
-    "install_msg": "Thank you for installing getnotes! Please note that the `setdatabase` commands are owner only",
+    "install_msg": "Thank you for installing getnotes! Please note that the `setnotesdatabase` commands are owner only",
     "name": "SS13 Notes Helper",
     "short": "Obtains player notes and posts them into discord on command!",
     "description": "Pulls player notes from your database. TG Scheme required",
