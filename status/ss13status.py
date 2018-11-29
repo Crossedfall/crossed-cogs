@@ -126,7 +126,7 @@ class SS13Status(BaseCog):
         """
         try:
             await self.config.admin_notice_channel.set(text_channel.id)
-            await ctx.send(f"Admin notifiations will be sent to: <#{text_channel.id}>")
+            await ctx.send(f"Admin notifications will be sent to: <#{text_channel.id}>")
 
         except(ValueError, KeyError, AttributeError):
             await ctx.send("There was a problem setting the notification channel. Please check your entry and try again.")
@@ -201,9 +201,9 @@ class SS13Status(BaseCog):
 
     async def query_server(self, game_server:str, game_port:int ) -> dict:
         """
-        Querries the server for information
+        Queries the server for information
         """
-        querystr = "?status" #Might expand on this later to allow extra queries so I'm making this a seperate string for now
+        querystr = "?status" #Might expand on this later to allow extra queries so I'm making this a separate string for now
         conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
         try:
             query = b"\x00\x83" + struct.pack('>H', len(querystr) + 6) + b"\x00\x00\x00\x00\x00" + querystr.encode() + b"\x00" #Creates a packet for byond according to TG's standard

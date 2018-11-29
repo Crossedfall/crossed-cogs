@@ -34,7 +34,7 @@ class GetNotes(BaseCog):
     @commands.group()
     async def setnotesdatabase(self,ctx):
         """
-        SS13 MySQL databse settings
+        SS13 MySQL database settings
         """
         pass
     
