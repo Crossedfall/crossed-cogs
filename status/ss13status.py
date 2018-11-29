@@ -20,8 +20,8 @@ BaseCog = getattr(commands, "Cog", object)
 class SS13Status(BaseCog):
 
     def __init__(self, bot):
-        global serv
-        global antispam
+        global serv #Will be the task responsible for incoming game data
+        global antispam #Used to prevent @here mention spam
         antispam = 0
 
         self.bot = bot
@@ -35,6 +35,7 @@ class SS13Status(BaseCog):
             "new_round_channel": None,
             "admin_notice_channel": None,
             "comms_key": "default_pwd",
+            "listen_port": 8081,
         }
 
         self.config.register_global(**default_global)
@@ -42,7 +43,13 @@ class SS13Status(BaseCog):
     
     def __unload(self):
         serv.cancel()
-        print("No longer listening")
+
+    async def changed_port(self, ctx, port: int):
+        global serv
+        serv.cancel()
+        await asyncio.sleep(5) 
+        serv = self.bot.loop.create_task(self.listener())
+        await ctx.send(f"Listening on port: {port}")
 
     @commands.guild_only()
     @commands.group()
@@ -59,7 +66,7 @@ class SS13Status(BaseCog):
         Sets the server IP used for status checks
         """
         try:
-            ipaddress.ip_address(host)
+            ipaddress.ip_address(host) # Confirms that the IP provided is valid. If the IP is not valid, a ValueError is thrown.
             await self.config.server.set(host)
             await ctx.send(f"Server set to `{host}")
         except(ValueError):
@@ -72,7 +79,7 @@ class SS13Status(BaseCog):
         Sets the port used for the status checks
         """
         try:
-            if 1024 <= port <= 65535:
+            if 1024 <= port <= 65535: # We don't want to allow reserved ports to be set
                 await self.config.game_port.set(port)
                 await ctx.send(f"Database port set to: {port}")
             else:
@@ -138,11 +145,27 @@ class SS13Status(BaseCog):
         Set the communications key for the server
         """
         try:
-            await self.config.comms_key.set(key)
+            await self.config.comms_key.set(key) #Used to verify incoming game data
             await ctx.send("Comms key set. You may wish to edit or otherwise remove the key from this channel.")
         
         except(ValueError, KeyError, AttributeError):
             await ctx.send("There was a problem setting your communications key. Please check your entry and try again.")
+
+    @setstatus.command()
+    @checks.is_owner()
+    async def listenport(self, ctx, port: int):
+        """
+        Set the port you'd like the bot to listen on
+        """
+        try:
+            if 1024 <= port <= 65535: #Same as the other port config option, we only want to allow non-reserved ports
+                await self.config.listen_port.set(port)
+                await ctx.send(f"Changing the port...")
+                await self.changed_port(ctx, port) #Restart the listening service
+            else:
+                await ctx.send(f"{port} is not a valid port!")
+        except (ValueError, KeyError, AttributeError):
+            await ctx.send("There was a problem setting your port. Please check to ensure you're attempting to use a port from 1024 to 65535")
 
     @setstatus.command()
     @checks.admin_or_permissions(administrator=True)
@@ -154,9 +177,9 @@ class SS13Status(BaseCog):
         embed=discord.Embed(title="__Current Settings:__")
         
         for k, v in settings.items():
-            if k is 'comms_key':
+            if k is 'comms_key': #We don't want to actively display the comms key
                 embed.add_field(name=f"{k}:", value="`redacted`", inline=False)
-            elif k is 'new_round_channel' or k is 'admin_notice_channel':
+            elif k is 'new_round_channel' or k is 'admin_notice_channel': #Linkify channels
                 embed.add_field(name=f"{k}:", value=f"<#{v}>", inline=False)
             else:
                 embed.add_field(name=f"{k}:", value=v, inline=False)
@@ -176,11 +199,12 @@ class SS13Status(BaseCog):
 
         data = await self.query_server(server, port)
 
-        if not data:
+        if not data: #Server is not responding, send the offline message
             embed=discord.Embed(title="__Server Status:__", description=f"{msg}", color=0xff0000)
             await ctx.send(embed=embed)
 
         else:
+            #Reported time is in seconds, we need to convert that to be easily understood
             duration = int(*data['round_duration'])
             hours = int(round(duration/3600))
             minutes = int(round(duration/60))
@@ -212,8 +236,7 @@ class SS13Status(BaseCog):
 
             conn.sendall(query)
 
-            data = conn.recv(4096)
-            print(data)
+            data = conn.recv(4096) #Minimum number should be 4096, anything less will lose data
 
             parsed_data = urllib.parse.parse_qs(data[5:-1].decode())
 
@@ -244,7 +267,7 @@ class SS13Status(BaseCog):
             """
             
         except ConnectionRefusedError:
-            return None
+            return None #Server is likely offline
 
         finally:
             conn.close()
@@ -256,66 +279,66 @@ class SS13Status(BaseCog):
         antispam = 0
 
     async def handle_data(self, reader, writer):
+        ###############
+        #Data Handling#
+        ###############
         data = await reader.read(10000)
         msg = data.decode()
-        msg = msg.split(" ")[1]
-        addr = writer.get_extra_info('peername')
+        msg = msg.split(" ")[1] #Drop the 'GET'
 
-        print(f"Received {msg!r} from {addr!r}")
-        
-        parsed_data = urllib.parse.parse_qs(msg[2:len(msg)])
+        parsed_data = urllib.parse.parse_qs(msg[2:len(msg)]) #Drop the leading ?/ and make the text readable
 
-        ####
+        writer.close()
+
+        ##################
+        #Message Handling#
+        ##################
         global antispam
         admin_channel = await self.config.admin_notice_channel()
         new_round_channel = await self.config.new_round_channel()
         comms_key = await self.config.comms_key()
         byondurl = await self.config.server_url()
-        
-        print(parsed_data)
 
-        if ('key' in parsed_data) and (comms_key in parsed_data['key']):
+        if ('key' in parsed_data) and (comms_key in parsed_data['key']): #Check to ensure that we're only serving messages from our game
             if ('serverStart' in parsed_data) and (new_round_channel is not None):
                 embed = discord.Embed(title="Starting new round!", description=byondurl, color=0x8080ff)
                 await self.bot.get_channel(new_round_channel).send(embed=embed)
 
-            elif ('announce_channel' in parsed_data) and ('admin' in parsed_data['announce_channel']):
+            elif ('announce_channel' in parsed_data) and ('admin' in parsed_data['announce_channel']): #Secret messages only meant for admin eyes
                 announce = str(*parsed_data['announce'])
                 if "Ticket" in announce:
                     ticket = announce.split('): ')
                     embed = discord.Embed(title=f"{ticket[0]}):", description=ticket[1],color=0xff0000)
-                    embed.set_footer(text="No admins were online to process this request")
-
                     await self.bot.get_channel(admin_channel).send(embed=embed)
-                elif "@here" in announce and antispam == 0:
+
+                elif "@here" in announce and antispam == 0: #Ping any online admins once every 5 minutes
                     if "A new ticket" in announce:
-                        await self.bot.get_channel(admin_channel).send(f"@here\n")
+                        await self.bot.get_channel(admin_channel).send(f"@here - A new ticket was submitted but no admins appear to be online.\n")
                         
                         antispam = 1
                         self.spam_check()
+
                     else:
                         await self.bot.get_channel(admin_channel).send(f"@here - A new round ending event requires/might need attention, but there are no admins online.\n")
 
                         antispam = 1
                         self.spam_check()
-                elif "@here" not in announce:
+
+                elif "@here" not in announce: 
                     embed = discord.Embed(title=announce, color=0xf95100)
                     await self.bot.get_channel(admin_channel).send(embed=embed)
-                else:
-                    pass
-        else:
-            pass
 
-        writer.close()
+                else: #If it's not one of the above, it's not worth serving
+                    pass
+        else:#Don't serve any messages that aren't from our game
+            pass
 
 
     async def listener(self):
-        await asyncio.sleep(10)
+        await asyncio.sleep(10) #Delay before listening to ensure that the interface isn't bound multiple times
+        port = await self.config.listen_port()
 
-        server = await asyncio.start_server(self.handle_data, '127.0.0.1', 8080)
-        addr = server.sockets[0].getsockname()
+        server = await asyncio.start_server(self.handle_data, '0.0.0.0', port) #Listen on all interfaces from a non-standard port
 
-        print(f'Listening on {addr}')
-
-        async with server:
+        async with server: #Listen until the cog is unloaded or the bot shutsdown
             await server.serve_forever()
