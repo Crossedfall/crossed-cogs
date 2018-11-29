@@ -12,7 +12,7 @@ import discord
 #Redbot Imports
 from redbot.core import commands, checks, Config, utils
 
-__version__ = "0.1.0"
+__version__ = "0.9.0"
 __author__ = "Crossedfall"
 
 BaseCog = getattr(commands, "Cog", object)
@@ -21,11 +21,13 @@ class SS13Status(BaseCog):
 
     def __init__(self, bot):
         global serv
+        global antispam
+        antispam = 0
 
         self.bot = bot
         self.config = Config.get_conf(self, 3257193194, force_registration=True)
 
-        default_guild = {
+        default_global = {
             "server": "127.0.0.1",
             "game_port": 7777,
             "offline_message": "Currently offline",
@@ -35,8 +37,8 @@ class SS13Status(BaseCog):
             "comms_key": "default_pwd",
         }
 
-        self.config.register_guild(**default_guild)
-        serv = bot.loop.create_task(self.server())
+        self.config.register_global(**default_global)
+        serv = bot.loop.create_task(self.listener())
     
     def __unload(self):
         serv.cancel()
@@ -58,7 +60,7 @@ class SS13Status(BaseCog):
         """
         try:
             ipaddress.ip_address(host)
-            await self.config.guild(ctx.guild).server.set(host)
+            await self.config.server.set(host)
             await ctx.send(f"Server set to `{host}")
         except(ValueError):
             await ctx.send(f"`{host}` is not a valid IP address!")
@@ -71,7 +73,7 @@ class SS13Status(BaseCog):
         """
         try:
             if 1024 <= port <= 65535:
-                await self.config.guild(ctx.guild).game_port.set(port)
+                await self.config.game_port.set(port)
                 await ctx.send(f"Database port set to: {port}")
             else:
                 await ctx.send(f"{port} is not a valid port!")
@@ -85,7 +87,7 @@ class SS13Status(BaseCog):
         Set a custom message for whenever the server is offline.
         """ 
         try:
-            await self.config.guild(ctx.guild).offline_message.set(msg)
+            await self.config.offline_message.set(msg)
             await ctx.send(f"Offline message set to: `{msg}`")
         except (ValueError, KeyError, AttributeError):
             await ctx.send("There was a problem setting your custom offline message. Please check your entry and try again.")
@@ -97,7 +99,7 @@ class SS13Status(BaseCog):
         Set the byond URL for your server (For embeds)
         """
         try:
-            await self.config.guild(ctx.guild).server_url.set(url)
+            await self.config.server_url.set(url)
             await ctx.send(f"Server url set to: `{url}`")
 
         except (ValueError, KeyError, AttributeError):
@@ -110,7 +112,7 @@ class SS13Status(BaseCog):
         Set the text channel to display new round notifications
         """
         try: 
-            await self.config.guild(ctx.guild).new_round_channel.set(text_channel.id)
+            await self.config.new_round_channel.set(text_channel.id)
             await ctx.send(f"New round notifications will be sent to: <#{text_channel.id}>")
 
         except(ValueError, KeyError, AttributeError):
@@ -123,7 +125,7 @@ class SS13Status(BaseCog):
         Set the text channel to display admin notifications
         """
         try:
-            await self.config.guild(ctx.guild).admin_notice_channel.set(text_channel.id)
+            await self.config.admin_notice_channel.set(text_channel.id)
             await ctx.send(f"Admin notifiations will be sent to: <#{text_channel.id}>")
 
         except(ValueError, KeyError, AttributeError):
@@ -136,7 +138,7 @@ class SS13Status(BaseCog):
         Set the communications key for the server
         """
         try:
-            await self.config.guild(ctx.guild).comms_key.set(key)
+            await self.config.comms_key.set(key)
             await ctx.send("Comms key set. You may wish to edit or otherwise remove the key from this channel.")
         
         except(ValueError, KeyError, AttributeError):
@@ -148,7 +150,7 @@ class SS13Status(BaseCog):
         """
         Lists the current settings
         """
-        settings = await self.config.guild(ctx.guild).all()
+        settings = await self.config.all()
         embed=discord.Embed(title="__Current Settings:__")
         
         for k, v in settings.items():
@@ -167,10 +169,10 @@ class SS13Status(BaseCog):
         """
         Gets the current server status and round details
         """
-        server = await self.config.guild(ctx.guild).server()
-        port = await self.config.guild(ctx.guild).game_port()        
-        msg = await self.config.guild(ctx.guild).offline_message()
-        server_url = await self.config.guild(ctx.guild).server_url()
+        server = await self.config.server()
+        port = await self.config.game_port()        
+        msg = await self.config.offline_message()
+        server_url = await self.config.server_url()
 
         data = await self.query_server(server, port)
 
@@ -240,11 +242,18 @@ class SS13Status(BaseCog):
             | shuttle_timer  | str    |
             +----------------+--------+
             """
+            
         except ConnectionRefusedError:
             return None
 
         finally:
             conn.close()
+    
+    async def spam_check(self):
+        await asyncio.sleep(300)
+
+        global antispam
+        antispam = 0
 
     async def handle_data(self, reader, writer):
         data = await reader.read(10000)
@@ -256,19 +265,51 @@ class SS13Status(BaseCog):
         
         parsed_data = urllib.parse.parse_qs(msg[2:len(msg)])
 
+        ####
+        global antispam
+        admin_channel = await self.config.admin_notice_channel()
+        new_round_channel = await self.config.new_round_channel()
+        comms_key = await self.config.comms_key()
+        byondurl = await self.config.server_url()
+        
         print(parsed_data)
 
-        if 'serverStart' in parsed_data:
-            await self.bot.get_channel(447654424521998337).send("New round starting!")
-        elif ('admin' in parsed_data['announce_channel']):
-            await self.bot.get_channel(447654424521998337).send(f"New ticket: {str(*parsed_data['announce'])}")
+        if ('key' in parsed_data) and (comms_key in parsed_data['key']):
+            if ('serverStart' in parsed_data) and (new_round_channel is not None):
+                embed = discord.Embed(title="Starting new round!", description=byondurl, color=0x8080ff)
+                await self.bot.get_channel(new_round_channel).send(embed=embed)
+
+            elif ('announce_channel' in parsed_data) and ('admin' in parsed_data['announce_channel']):
+                announce = str(*parsed_data['announce'])
+                if "Ticket" in announce:
+                    ticket = announce.split('): ')
+                    embed = discord.Embed(title=f"{ticket[0]}):", description=ticket[1],color=0xff0000)
+                    embed.set_footer(text="No admins were online to process this request")
+
+                    await self.bot.get_channel(admin_channel).send(embed=embed)
+                elif "@here" in announce and antispam == 0:
+                    if "A new ticket" in announce:
+                        await self.bot.get_channel(admin_channel).send(f"@here\n")
+                        
+                        antispam = 1
+                        self.spam_check()
+                    else:
+                        await self.bot.get_channel(admin_channel).send(f"@here - A new round ending event requires/might need attention, but there are no admins online.\n")
+
+                        antispam = 1
+                        self.spam_check()
+                elif "@here" not in announce:
+                    embed = discord.Embed(title=announce, color=0xf95100)
+                    await self.bot.get_channel(admin_channel).send(embed=embed)
+                else:
+                    pass
         else:
             pass
 
         writer.close()
 
 
-    async def server(self):
+    async def listener(self):
         await asyncio.sleep(10)
 
         server = await asyncio.start_server(self.handle_data, '127.0.0.1', 8080)
