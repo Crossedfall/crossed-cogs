@@ -22,6 +22,10 @@ class SS13Status(BaseCog):
     def __init__(self, bot):
         global serv #Will be the task responsible for incoming game data
         global antispam #Used to prevent @here mention spam
+        global statusmsg #Used to delete the status message
+        global newroundmsg #Used to delete the new round notification
+        newroundmsg = None
+        statusmsg  = None
         antispam = 0
 
         self.bot = bot
@@ -63,7 +67,7 @@ class SS13Status(BaseCog):
     @checks.is_owner()
     async def server(self, ctx, host: str):
         """
-        Sets the server IP used for status checks
+        Sets the server IP used for status checks, defaults to localhost
         """
         try:
             ipaddress.ip_address(host) # Confirms that the IP provided is valid. If the IP is not valid, a ValueError is thrown.
@@ -76,7 +80,7 @@ class SS13Status(BaseCog):
     @checks.is_owner()
     async def port(self, ctx, port: int):
         """
-        Sets the port used for the status checks
+        Sets the port used for the status checks, defaults to 7777
         """
         try:
             if 1024 <= port <= 65535: # We don't want to allow reserved ports to be set
@@ -192,10 +196,12 @@ class SS13Status(BaseCog):
 
     @commands.guild_only()
     @commands.command()
+    #@commands.cooldown(1, 30)
     async def status(self, ctx):
         """
         Gets the current server status and round details
         """
+        global statusmsg
         server = await self.config.server()
         port = await self.config.game_port()        
         msg = await self.config.offline_message()
@@ -224,7 +230,11 @@ class SS13Status(BaseCog):
             embed.add_field(name="Round Duration", value=f"{hours:02d}:{minutes:02d}", inline=True)
             embed.add_field(name="Server Link:", value=f"{server_url}", inline=False)
 
-            await ctx.send(embed=embed)
+            try:
+                await statusmsg.delete()
+                statusmsg = await ctx.send(embed=embed)
+            except(discord.DiscordException, AttributeError):
+                statusmsg = await ctx.send(embed=embed)
         
 
     async def query_server(self, game_server:str, game_port:int ) -> dict:
@@ -298,6 +308,7 @@ class SS13Status(BaseCog):
         #Message Handling#
         ##################
         global antispam
+        global newroundmsg
         admin_channel = await self.config.admin_notice_channel()
         new_round_channel = await self.config.new_round_channel()
         comms_key = await self.config.comms_key()
@@ -306,7 +317,11 @@ class SS13Status(BaseCog):
         if ('key' in parsed_data) and (comms_key in parsed_data['key']): #Check to ensure that we're only serving messages from our game
             if ('serverStart' in parsed_data) and (new_round_channel is not None):
                 embed = discord.Embed(title="Starting new round!", description=byondurl, color=0x8080ff)
-                await self.bot.get_channel(new_round_channel).send(embed=embed)
+                try:
+                    await newroundmsg.delete()
+                    newroundmsg = await self.bot.get_channel(new_round_channel).send(embed=embed)
+                except(discord.DiscordException, AttributeError):
+                    newroundmsg = await self.bot.get_channel(new_round_channel).send(embed=embed)
 
             elif ('announce_channel' in parsed_data) and ('admin' in parsed_data['announce_channel']): #Secret messages only meant for admin eyes
                 announce = str(*parsed_data['announce'])
@@ -320,13 +335,13 @@ class SS13Status(BaseCog):
                         await self.bot.get_channel(admin_channel).send(f"@here - A new ticket was submitted but no admins appear to be online.\n")
                         
                         antispam = 1
-                        self.spam_check()
+                        await self.spam_check()
 
                     else:
                         await self.bot.get_channel(admin_channel).send(f"@here - A new round ending event requires/might need attention, but there are no admins online.\n")
 
                         antispam = 1
-                        self.spam_check()
+                        await self.spam_check()
 
                 elif "@here" not in announce: 
                     embed = discord.Embed(title=announce, color=0xf95100)
