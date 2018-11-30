@@ -146,7 +146,11 @@ class SS13Status(BaseCog):
         """
         try:
             await self.config.comms_key.set(key) #Used to verify incoming game data
-            await ctx.send("Comms key set. You may wish to edit or otherwise remove the key from this channel.")
+            await ctx.send("Comms key set.")
+            try:
+                await ctx.message.delete()
+            except(discord.DiscordException):
+                await ctx.send("I do not have the required permissions to delete messages. You may wish to edit/remove your comms key manually.")
         
         except(ValueError, KeyError, AttributeError):
             await ctx.send("There was a problem setting your communications key. Please check your entry and try again.")

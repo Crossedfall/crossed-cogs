@@ -91,6 +91,10 @@ class GetNotes(BaseCog):
         try:
             await self.config.guild(ctx.guild).mysql_password.set(passwd)
             await ctx.send("Your password has been set.")
+            try:
+                await ctx.message.delete()
+            except(discord.DiscordException):
+                await ctx.send("I do not have the required permissions to delete messages, please remove/edit the password manually.")
         except (ValueError, KeyError, AttributeError):
             await ctx.send("There was a problem setting the password for your database.")
 
