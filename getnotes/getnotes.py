@@ -145,7 +145,7 @@ class GetNotes(BaseCog):
 
         try:
             # Establish a connection with the database and pull the relevant data
-            conn = mysql.connector.connect(host=db_host,port=db_port,database=db,user=db_user,password=db_pass)
+            conn = mysql.connector.connect(host=db_host,port=db_port,database=db,user=db_user,password=db_pass, connect_timeout=2)
             cursor = conn.cursor(dictionary=True)
             cursor.execute(f"SELECT timestamp, adminckey, text, type FROM messages WHERE targetckey='{target}'")
             rows = cursor.fetchall()
