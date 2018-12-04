@@ -72,7 +72,7 @@ class SS13Status(BaseCog):
         try:
             ipaddress.ip_address(host) # Confirms that the IP provided is valid. If the IP is not valid, a ValueError is thrown.
             await self.config.server.set(host)
-            await ctx.send(f"Server set to `{host}")
+            await ctx.send(f"Server set to `{host}`")
         except(ValueError):
             await ctx.send(f"`{host}` is not a valid IP address!")
     
@@ -85,9 +85,9 @@ class SS13Status(BaseCog):
         try:
             if 1024 <= port <= 65535: # We don't want to allow reserved ports to be set
                 await self.config.game_port.set(port)
-                await ctx.send(f"Database port set to: {port}")
+                await ctx.send(f"Database port set to: `{port}`")
             else:
-                await ctx.send(f"{port} is not a valid port!")
+                await ctx.send(f"`{port}` is not a valid port!")
         except (ValueError, KeyError, AttributeError):
             await ctx.send("There was a problem setting your port. Please check to ensure you're attempting to use a port from 1024 to 65535")
 
