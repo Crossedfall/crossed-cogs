@@ -85,7 +85,7 @@ class SS13Status(BaseCog):
         try:
             if 1024 <= port <= 65535: # We don't want to allow reserved ports to be set
                 await self.config.game_port.set(port)
-                await ctx.send(f"Database port set to: `{port}`")
+                await ctx.send(f"Host port set to: `{port}`")
             else:
                 await ctx.send(f"`{port}` is not a valid port!")
         except (ValueError, KeyError, AttributeError):
@@ -245,7 +245,7 @@ class SS13Status(BaseCog):
         conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
         try:
             query = b"\x00\x83" + struct.pack('>H', len(querystr) + 6) + b"\x00\x00\x00\x00\x00" + querystr.encode() + b"\x00" #Creates a packet for byond according to TG's standard
-            conn.settimeout(20) #Byond is slow, timeout set relatively high to account for any latency
+            conn.settimeout(5) #Byond is slow, timeout set relatively high to account for any latency
             conn.connect((game_server, game_port)) 
 
             conn.sendall(query)
