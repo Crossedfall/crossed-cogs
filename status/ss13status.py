@@ -280,7 +280,7 @@ class SS13Status(BaseCog):
             +----------------+--------+
             """
             
-        except ConnectionRefusedError:
+        except (ConnectionRefusedError, socket.gaierror, socket.timeout):
             return None #Server is likely offline
 
         finally:
