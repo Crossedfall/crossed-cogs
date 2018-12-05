@@ -13,11 +13,25 @@ These are utility cogs explicitly intended for SS13 servers leveraging off of th
 
 ## Setup
 
+### Redbot:
+
+Setup for your redbot V3 instance is a straightforward process. 
+
+1. Add this repo/branch with `[p]repo add ss13-cogs https://github.com/crossedfall/crossed-cogs ss13/master`
+2. Install the cogs you want to use with `[p]cog install ss13 getnotes` and `[p]cog install ss13 status`
+3. Load your new cogs with `[p]load status getnotes`
+
+_Any reference to [p] should be replaced with your prefix_
+
 ### GetNotes:
 
 In order to fully utilize the GetNotes cog you will need to have a fully configured player database for your SS13 server configured using the [/TG/ scheme](https://github.com/tgstation/tgstation/blob/master/SQL/tgstation_schema.sql). 
 
 Once you have a database configured, you will need to provide a user that the bot can use to query said database. It is **highly** recommended that you ensure this user only has read privileges and is separate from the one your server is configured to use. 
+
+--
+
+_Note:_ While the required `mysql-connector` package should be installed automatically.. If you get an error when using the notes cog where the `mysql-connector` module wasn't found, please ensure it is installed either by using your favorite terminal or (with the debug flag enabled on your bot) `[p]pipinstall mysql-connector` where `[p]` is your prefix.  
 
 
 
@@ -62,20 +76,7 @@ A new option (`BOT_IP`) within within the [comms.txt](https://github.com/tgstati
 ## Communication key for receiving data through world/Topic(), you don't want to give this out
 COMMS_KEY SomeKeyHere
 
-## World address and port for server receiving cross server messages
-## Use '+' to denote spaces in ServerName
-## Repeat this entry to add more servers
-#CROSS_SERVER ServerName byond:\\address:port
-
-## Name that the server calls itself in communications
-#CROSS_COMMS_NAME
-
-## Hub address for tracking stats
-## example: Hubmakerckey.Hubname
-#MEDAL_HUB_ADDRESS
-
-## Password for the hub page
-#MEDAL_HUB_PASSWORD
+[...]
 
 ## Bot IP:Port for discord notifications
 BOT_IP 127.0.0.1:8081
@@ -108,3 +109,17 @@ The bot will automatically provide an `@here` mention in the designated admin ch
 --
 
 In order to serve messages received by your game server, you will need to ensure that the `comms_key` for the bot and the server are the same. The bot will automatically drop any messages sent that do not contain your `comms_key`. This setting can be found within your [config file](https://github.com/tgstation/tgstation/blob/master/config/comms.txt#L2)
+
+
+
+### Contact:
+
+For questions or concerns, feel free to submit a new [issue](https://github.com/crossedfall/crossed-cogs/issues). I will make my best effort to address any concerns/feedback provided within a reasonable amount of time.
+
+
+
+### Credits:
+
+- [Monster860](https://github.com/monster860) for his subsystem code
+- The [/TG/ community](https://github.com/tgstation) for their efforts on SS13 
+- The [Cog-Creators](https://github.com/Cog-Creators) staff for their work on redbot

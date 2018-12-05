@@ -160,6 +160,9 @@ class GetNotes(BaseCog):
             embed=discord.Embed(title=f"Error looking up notes for: {target}", description=f"{format(err)}", color=0xff0000)
             await ctx.send(embed=embed)
 
+        except ModuleNotFoundError:
+            await ctx.send("`mysql-connector` requirement not found! Please install this requirement using `pip install mysql-connector`.")
+
         finally:
             if cursor is not None:
                 cursor.close()  
