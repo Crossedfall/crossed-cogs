@@ -1,8 +1,9 @@
 {
-    "author" : "Crossedfall (Crossedfall#1001)",
+    "author" : ["Crossedfall (Crossedfall#1001)"],
     "install_msg" : "Utility cogs for SS13",
     "name" : "CrossedCogs",
     "short" : "SS13 cogs",
+    "requirements": ["mysql-connector"],
     "description" : "Notes and Status cogs for SS13 servers",
     "tags" : ["Fun", "SS13", "Utility", "Administration"]
 }

@@ -1,9 +1,10 @@
 {
-    "author": "Crossedfall (Crossedfall#1001)",
+    "author": ["Crossedfall (Crossedfall#1001)"],
     "install_msg": "Please ensure that the listen port (defaults to `8081`) is allowed through your firewall to enable new round and admin notifications. Please note that all configurable options are owner only.",
     "name": "SS13 Status Check",
     "short": "Pulls information from the current SS13 round",
     "description": "Checks the current status of an SS13 round and pulls information about the number of players, the game-mode, and round duration.",
+    "permissions" : ["Manage Messages", "Embed Links"],
     "tags": [
         "Space Station 13",
         "Game",
