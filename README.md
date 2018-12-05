@@ -18,14 +18,16 @@ These are utility cogs explicitly intended for SS13 servers leveraging off of th
 Setup for your redbot V3 instance is a straightforward process. 
 
 1. Add this repo/branch with `[p]repo add ss13-cogs https://github.com/crossedfall/crossed-cogs ss13/master`
-2. Install the cogs you want to use with `[p]cog install ss13 getnotes` and `[p]cog install ss13 status`
+2. Install the cogs you want to use with `[p]cog install ss13-cogs getnotes` and `[p]cog install ss13-cogs status`
 3. Load your new cogs with `[p]load status getnotes`
 
 _Any reference to [p] should be replaced with your prefix_
 
+---
+
 ### GetNotes:
 
-In order to fully utilize the GetNotes cog you will need to have a fully configured player database for your SS13 server configured using the [/TG/ scheme](https://github.com/tgstation/tgstation/blob/master/SQL/tgstation_schema.sql). 
+In order to fully utilize the GetNotes cog you will need to have a fully configured player database for your SS13 server configured using the [/TG/ schema](https://github.com/tgstation/tgstation/blob/master/SQL/tgstation_schema.sql). 
 
 Once you have a database configured, you will need to provide a user that the bot can use to query said database. It is **highly** recommended that you ensure this user only has read privileges and is separate from the one your server is configured to use. 
 
@@ -33,13 +35,15 @@ Once you have a database configured, you will need to provide a user that the bo
 
 _Note:_ While the required `mysql-connector` package should be installed automatically.. If you get an error when using the notes cog where the `mysql-connector` module wasn't found, please ensure it is installed either by using your favorite terminal or (with the debug flag enabled on your bot) `[p]pipinstall mysql-connector` where `[p]` is your prefix.  
 
-
+---
 
 ### Status:
 
 The status cog operates by probing the server with a `?status` request and then parses that information out in a readable format, see the below example on how that might look.
 
-![1543959022724](https://i.imgur.com/7K1x9nd.png)
+|                      Online                       |                      Offline                      |
+| :-----------------------------------------------: | :-----------------------------------------------: |
+| ![1543959022724](https://i.imgur.com/7K1x9nd.png) | ![1544039500509](https://i.imgur.com/EXe4p1T.png) |
 
 
 
@@ -52,12 +56,12 @@ SUBSYSTEM_DEF(redbot)
 	name = "Bot Comms"
 	flags = SS_NO_FIRE
 
-/datum/controller/subsystem/ast/Initialize(timeofday)
+/datum/controller/subsystem/redbot/Initialize(timeofday)
 	if(config && GLOB.bot_ip)
 		var/query = "http://[GLOB.bot_ip]/?serverStart=1&key=[global.comms_key]"
 		world.Export(query)
 
-/datum/controller/subsystem/ast/proc/send_discord_message(var/channel, var/message, var/priority_type)
+/datum/controller/subsystem/redbot/proc/send_discord_message(var/channel, var/message, var/priority_type)
 	if(!config || !GLOB.bot_ip)
 		return
 	if(priority_type && !total_admins_active())
@@ -82,15 +86,17 @@ COMMS_KEY SomeKeyHere
 BOT_IP 127.0.0.1:8081
 ```
 
+#### Usage:
 
-
--------
-
-Once the above is added into your codebase, you can send administrative notices directly into discord by calling the `send_discord_message` function. 
+Once the above is added into your codebase, you can send administrative notices directly into discord by calling the `send_discord_message(var/channel, var/message, var/priority_type)` function. Currently, the status cog will only check for new round notifications and messages directed at the admin channel. Any messages sent should ensure that the first parameter is set to `admin`. *Future development may grant added flexibility here.*
 
 If, for example, you want to send new ticket admin notifications to discord you can do so using the following method within your `if(is_bwoik)` statement.  
 
-`SSredbot.send_discord_message("admin", "Ticket #[id] created by [usr.ckey] ([usr.real_name]): [name]", "ticket")`
+```dm
+SSredbot.send_discord_message("admin", "Ticket #[id] created by [usr.ckey] ([usr.real_name]): [name]", "ticket")
+```
+
+
 
 ![1544022902014](https://i.imgur.com/DaIsZ3Q.png)
 
@@ -98,19 +104,28 @@ If, for example, you want to send new ticket admin notifications to discord you 
 
 As another example, if you wanted to show a round ending event (like the supermater shard delaminating), you can do so by adding a very similar method within the function handling the event, in this case the shard delaminating event.
 
-`SSredbot.send_discord_message("admin","The supermatter has just delaminated.","round ending event")`
+```dm
+SSredbot.send_discord_message("admin","The supermatter has just delaminated.","round ending event")
+```
+
+
 
 ![1544023245022](https://i.imgur.com/9bihWqd.png)
 
+
+
+
+
 #### Important Notes:
 
-The bot will automatically provide an `@here` mention in the designated admin channel, which can be adjusted with the `[p]setstatus adminchannel` command (_where [p] is your prefix_). It is recommend to create an admin monitoring channel where the bot has permissions to mention and post updates.
-
---
-
-In order to serve messages received by your game server, you will need to ensure that the `comms_key` for the bot and the server are the same. The bot will automatically drop any messages sent that do not contain your `comms_key`. This setting can be found within your [config file](https://github.com/tgstation/tgstation/blob/master/config/comms.txt#L2)
+- The bot will automatically provide an `@here` mention in the designated admin channel, which can be adjusted with the `[p]setstatus adminchannel` command (_where [p] is your prefix_). It is recommend to create an admin monitoring channel where the bot has permissions to mention and post updates.
 
 
+
+
+- In order to serve messages received by your game server, you will need to ensure that the `comms_key` for the bot and the server are the same. The bot will automatically drop any messages sent that do not contain your `comms_key`. This setting can be found within your [config file](https://github.com/tgstation/tgstation/blob/master/config/comms.txt#L2)
+
+---
 
 ### Contact:
 
