@@ -331,7 +331,7 @@ class SS13Status(BaseCog):
                     await self.bot.get_channel(admin_channel).send(embed=embed)
 
                 elif "@here" in announce and antispam == 0: #Ping any online admins once every 5 minutes
-                    if "A new ticket" in announce:
+                    if "ticket" in announce:
                         await self.bot.get_channel(admin_channel).send(f"@here - A new ticket was submitted but no admins appear to be online.\n")
                         
                         antispam = 1

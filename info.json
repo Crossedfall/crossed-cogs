@@ -1,8 +1,8 @@
 {
     "author" : "Crossedfall (Crossedfall#1001)",
-    "install_msg" : "Unless you're me, you most likely shouldn't be using this",
+    "install_msg" : "Utility cogs for SS13",
     "name" : "CrossedCogs",
-    "short" : "Cogs made by an idiot",
-    "description" : "Just some cogs I'm making while re-learning python",
-    "tags" : ["Fun", "Cake"]
+    "short" : "SS13 cogs",
+    "description" : "Notes and Status cogs for SS13 servers",
+    "tags" : ["Fun", "SS13", "Utility", "Administration"]
 }
