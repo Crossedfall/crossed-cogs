@@ -4,12 +4,12 @@
 
 ## Overview
 
-These are utility cogs explicitly intended for SS13 servers leveraging off of the [/TG/](https://github.com/tgstation/tgstation) codebases. The idea is to provide a clean and convenient way to push data from the game to discord all while enjoying the many other benefits of having a Red Bot V3 instance. These cogs may work for other codebases, however, this has not been tested and it may require some added effort during setup.
+These are utility cogs explicitly intended for SS13 servers leveraging off of the [/TG/](https://github.com/tgstation/tgstation) codebases. The idea is to provide a clean and convenient way to push data from the game to discord all while enjoying the many other benefits of having a [Red Bot V3 instance](https://github.com/Cog-Creators/Red-DiscordBot/tree/V3/develop). These cogs may work for other codebases, however, this has not been tested and it may require some added effort during setup.
 
 | Cog      | Description                                                  |
 | -------- | ------------------------------------------------------------ |
-| GetNotes | Pulls player notes from a SS13 [/TG/](https://github.com/tgstation/tgstation) schemed database <br /><br />*Requires: Mysql-connector* -- `pip install mysql-connector` |
-| Status   | Obtains the current status of a hosted SS13 round ) and pertinent admin pings (e.g. Ahelps, round ending events, custom pings) |
+| GetNotes | Pulls player notes from an SS13 [/TG/](https://github.com/tgstation/tgstation) schemed database <br /><br />*Requires: Mysql-connector* -- `pip install mysql-connector` |
+| Status   | Obtains the current status of a hosted SS13 round and pertinent admin pings (e.g. Ahelps, round ending events, custom pings) |
 
 ## Setup
 
@@ -57,24 +57,30 @@ SUBSYSTEM_DEF(redbot)
 	flags = SS_NO_FIRE
 
 /datum/controller/subsystem/redbot/Initialize(timeofday)
-	if(config && GLOB.bot_ip)
-		var/query = "http://[GLOB.bot_ip]/?serverStart=1&key=[global.comms_key]"
+	var/comms_key = CONFIG_GET(string/comms_key)
+	var/bot_ip = CONFIG_GET(string/bot_ip)
+	if(config && bot_ip)
+		var/query = "http://[bot_ip]/?serverStart=1&key=[comms_key]"
 		world.Export(query)
 
 /datum/controller/subsystem/redbot/proc/send_discord_message(var/channel, var/message, var/priority_type)
-	if(!config || !GLOB.bot_ip)
+	var/bot_ip = CONFIG_GET(string/bot_ip)
+	var/list/adm = get_admin_counts()
+	var/list/allmins = adm["present"]
+	. = allmins.len
+	if(!config || !bot_ip)
 		return
-	if(priority_type && !total_admins_active())
+	if(priority_type && !.)
 		send_discord_message(channel, "@here - A new [priority_type] requires/might need attention, but there are no admins online.") //Backup message should redbot be unavailable
 	var/list/data = list()
-	data["key"] = global.comms_key
+	data["key"] = CONFIG_GET(string/comms_key)
 	data["announce_channel"] = channel
 	data["announce"] = message
-	world.Export("http://[GLOB.bot_ip]/?[list2params(data)]")
+	world.Export("http://[bot_ip]/?[list2params(data)]")
 ```
 
 
-A new option (`BOT_IP`) within within the [comms.txt](https://github.com/tgstation/tgstation/blob/master/config/comms.txt) config file (or within your legacy config file) will also have to be added. The `BOT_IP` should be the ip and listening port of your bot. For example, 
+A new option (`BOT_IP`) within the [comms.txt](https://github.com/tgstation/tgstation/blob/master/config/comms.txt) config file (or within your legacy config file) will also have to be added. The `BOT_IP` should be the ip and listening port of your bot. For example, 
 
 ```txt
 ## Communication key for receiving data through world/Topic(), you don't want to give this out
@@ -86,11 +92,23 @@ COMMS_KEY SomeKeyHere
 BOT_IP 127.0.0.1:8081
 ```
 
+In order to process the new config option, the following entry must be added to the bottom of the [comms.dm](https://github.com/tgstation/tgstation/blob/master/code/controllers/configuration/entries/comms.dm) controller file:
+
+```dm
+[...]
+/datum/config_entry/string/medal_hub_password
+	protection = CONFIG_ENTRY_HIDDEN
+
+/datum/config_entry/string/bot_ip
+```
+
+
+
 #### Usage:
 
 Once the above is added into your codebase, you can send administrative notices directly into discord by calling the `send_discord_message(var/channel, var/message, var/priority_type)` function. Currently, the status cog will only check for new round notifications and messages directed at the admin channel. Any messages sent should ensure that the first parameter is set to `admin`. *Future development may grant added flexibility here.*
 
-If, for example, you want to send new ticket admin notifications to discord you can do so using the following method within your `if(is_bwoik)` statement.  
+If, for example, you want to send new ticket admin notifications to discord you can do so using the following method within your [if(is_bwoik)](https://github.com/tgstation/tgstation/blob/master/code/modules/admin/verbs/adminhelp.dm#L192) statement.  
 
 ```dm
 SSredbot.send_discord_message("admin", "Ticket #[id] created by [usr.ckey] ([usr.real_name]): [name]", "ticket")
@@ -135,6 +153,6 @@ For questions or concerns, feel free to submit a new [issue](https://github.com/
 
 ### Credits:
 
-- [Monster860](https://github.com/monster860) for his subsystem code
+- [Monster860](https://github.com/monster860) for his subsystem template
 - The [/TG/ community](https://github.com/tgstation) for their efforts on SS13 
 - The [Cog-Creators](https://github.com/Cog-Creators) staff for their work on redbot
