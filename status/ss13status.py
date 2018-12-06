@@ -292,21 +292,16 @@ class SS13Status(BaseCog):
         global antispam
         antispam = 0
 
-    async def handle_data(self, reader, writer):
-        ###############
-        #Data Handling#
-        ###############
+    async def data_handler(self, reader, writer):
         data = await reader.read(10000)
         msg = data.decode()
         msg = msg.split(" ")[1] #Drop the 'GET'
 
         parsed_data = urllib.parse.parse_qs(msg[2:len(msg)]) #Drop the leading ?/ and make the text readable
-
+        self.message_handler(parsed_data)
         writer.close()
 
-        ##################
-        #Message Handling#
-        ##################
+    async def message_handler(self, parsed_data = dict):
         global antispam
         global newroundmsg
         admin_channel = await self.config.admin_notice_channel()
@@ -357,7 +352,7 @@ class SS13Status(BaseCog):
         await asyncio.sleep(10) #Delay before listening to ensure that the interface isn't bound multiple times
         port = await self.config.listen_port()
 
-        server = await asyncio.start_server(self.handle_data, '0.0.0.0', port) #Listen on all interfaces from a non-standard port
+        server = await asyncio.start_server(self.data_handler, '0.0.0.0', port) #Listen on all interfaces from a non-standard port
 
         async with server: #Listen until the cog is unloaded or the bot shutsdown
             await server.serve_forever()
