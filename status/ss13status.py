@@ -5,6 +5,7 @@ import struct
 import select
 import socket
 import urllib.parse
+import html.parser as htmlparser
 
 #Discord Imports
 import discord
@@ -196,7 +197,7 @@ class SS13Status(BaseCog):
 
     @commands.guild_only()
     @commands.command()
-    #@commands.cooldown(1, 30)
+    @commands.cooldown(1, 5)
     async def status(self, ctx):
         """
         Gets the current server status and round details
@@ -296,8 +297,8 @@ class SS13Status(BaseCog):
         data = await reader.read(10000)
         msg = data.decode()
         msg = msg.split(" ")[1] #Drop the 'GET'
-
         parsed_data = urllib.parse.parse_qs(msg[2:len(msg)]) #Drop the leading ?/ and make the text readable
+
         await self.message_handler(parsed_data)
         writer.close()
 
@@ -308,6 +309,7 @@ class SS13Status(BaseCog):
         new_round_channel = await self.config.new_round_channel()
         comms_key = await self.config.comms_key()
         byondurl = await self.config.server_url()
+        parser = htmlparser.HTMLParser()
 
         if ('key' in parsed_data) and (comms_key in parsed_data['key']): #Check to ensure that we're only serving messages from our game
             if ('serverStart' in parsed_data) and (new_round_channel is not None):
@@ -322,6 +324,7 @@ class SS13Status(BaseCog):
                 announce = str(*parsed_data['announce'])
                 if "Ticket" in announce:
                     ticket = announce.split('): ')
+                    ticket[1] = parser.unescape(ticket[1])
                     embed = discord.Embed(title=f"{ticket[0]}):", description=ticket[1],color=0xff0000)
                     await self.bot.get_channel(admin_channel).send(embed=embed)
 
