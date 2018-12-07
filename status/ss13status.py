@@ -6,6 +6,7 @@ import select
 import socket
 import urllib.parse
 import html.parser as htmlparser
+import time
 
 #Discord Imports
 import discord
@@ -217,8 +218,7 @@ class SS13Status(BaseCog):
         else:
             #Reported time is in seconds, we need to convert that to be easily understood
             duration = int(*data['round_duration'])
-            hours = int(round(duration/3600))
-            minutes = int(round(duration/60))
+            duration = time.strftime('%H:%M', time.gmtime(duration))
 
             #Might make the embed configurable at a later date
 
@@ -228,7 +228,7 @@ class SS13Status(BaseCog):
             embed.add_field(name="Mode", value=str(*data['mode']), inline=True)
             embed.add_field(name="Players", value=str(*data['players']), inline=True)
             embed.add_field(name="Admins", value=str(*data['admins']), inline=True)
-            embed.add_field(name="Round Duration", value=f"{hours:02d}:{minutes:02d}", inline=True)
+            embed.add_field(name="Round Duration", value=f"{duration}", inline=True)
             embed.add_field(name="Server Link:", value=f"{server_url}", inline=False)
 
             try:
