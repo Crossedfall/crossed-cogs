@@ -298,7 +298,7 @@ class SS13Status(BaseCog):
         msg = msg.split(" ")[1] #Drop the 'GET'
 
         parsed_data = urllib.parse.parse_qs(msg[2:len(msg)]) #Drop the leading ?/ and make the text readable
-        self.message_handler(parsed_data)
+        await self.message_handler(parsed_data)
         writer.close()
 
     async def message_handler(self, parsed_data = dict):
