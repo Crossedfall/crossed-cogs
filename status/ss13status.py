@@ -118,7 +118,7 @@ class SS13Status(BaseCog):
     
     @setstatus.command()
     @checks.is_owner()
-    async def newroundnotificationchannel(self, ctx, text_channel: discord.TextChannel):
+    async def newroundchannel(self, ctx, text_channel: discord.TextChannel):
         """
         Set the text channel to display new round notifications
         """

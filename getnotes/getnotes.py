@@ -25,7 +25,8 @@ class GetNotes(BaseCog):
             "mysql_port": 3306,
             "mysql_user": "ss13",
             "mysql_password": "password",
-            "mysql_db": "feedback"
+            "mysql_db": "feedback",
+            "admin_ckey": {}
         }
 
         self.config.register_guild(**default_guild)
@@ -119,19 +120,57 @@ class GetNotes(BaseCog):
         settings = await self.config.guild(ctx.guild).all()
         embed=discord.Embed(title="__Current settings:__")
         for k, v in settings.items():
-            if k is not "mysql_password": # Ensures that the database password is not sent
-                embed.add_field(name=f"{k}:",value=v,inline=False)
-            else:
-                embed.add_field(name=f"{k}:",value="`redacted`",inline=False)
+            if k is not "admin_ckey":
+                if k is not "mysql_password": # Ensures that the database password is not sent
+                    embed.add_field(name=f"{k}:",value=v,inline=False)
+                else:
+                    embed.add_field(name=f"{k}:",value="`redacted`",inline=False)
         await ctx.send(embed=embed)
-
+    
+    @checks.mod_or_permissions(administrator=True)
+    @commands.guild_only()
+    @commands.group(autohelp=False)
+    async def registerckey(self, ctx, ckey: str):
+        """
+        Allows admins to register their ckey and perform admin actions from discord
+        """
+        admins = await self.config.guild(ctx.guild).admin_ckey()
+        if ckey in admins:
+            await ctx.send("Ckey already registered!")
+        else:
+            if ctx.message.author.id not in admins.values():
+                admins[ckey] = ctx.message.author.id
+                await ctx.send(f"Your ckey has been set to: `{ckey}`")
+                await self.config.guild(ctx.guild).admin_ckey.set(admins)
+            else:
+                await ctx.send("You already have a ckey registered to your user!")
 
     @checks.mod_or_permissions(administrator=True)
-    @commands.group(autohelp=False)
+    @commands.command()
     async def notes(self, ctx, player: str):
         """
         Gets the notes for a specific player
         """
+        query = f"SELECT timestamp, adminckey, text, type FROM messages WHERE targetckey='{player.lower()}'"
+        message = await ctx.send("Getting player notes...")
+
+        try:
+            rows = await self.query_database(ctx, query)
+            # Parse the data into individual fields within an embeded message in Discord for ease of viewing
+            embed=discord.Embed(title=f"Notes for: {player}", description=f"Total notes: {len(rows)}", color=0xf1d592)
+            for row in rows:
+                embed.add_field(name=f'{row["timestamp"]} UTC-5 (Central Time) | {row["type"]} by {row["adminckey"]}',value=row["text"])
+            await message.edit(content=None,embed=embed)
+        
+        except mysql.connector.Error as err:
+            embed=discord.Embed(title=f"Error looking up notes for: {player}", description=f"{format(err)}", color=0xff0000)
+            await message.edit(content=None,embed=embed)
+        
+        except ModuleNotFoundError:
+            await message.edit(content="`mysql-connector` requirement not found! Please install this requirement using `pip install mysql-connector`.")
+
+
+    async def query_database(self, ctx, query: str):
         # Database options loaded from the config
         db = await self.config.guild(ctx.guild).mysql_db()
         db_host = await self.config.guild(ctx.guild).mysql_host()
@@ -139,7 +178,6 @@ class GetNotes(BaseCog):
         db_user = await self.config.guild(ctx.guild).mysql_user()
         db_pass = await self.config.guild(ctx.guild).mysql_password()
 
-        target = player.lower()
         cursor = None # Since the cursor/conn variables can't actually be closed if the connection isn't properly established we set a None type here
         conn = None # ^
 
@@ -147,21 +185,13 @@ class GetNotes(BaseCog):
             # Establish a connection with the database and pull the relevant data
             conn = mysql.connector.connect(host=db_host,port=db_port,database=db,user=db_user,password=db_pass, connect_timeout=2)
             cursor = conn.cursor(dictionary=True)
-            cursor.execute(f"SELECT timestamp, adminckey, text, type FROM messages WHERE targetckey='{target}'")
+            cursor.execute(query)
             rows = cursor.fetchall()
 
-            # Parse the data into individual fields within an embeded message in Discord for ease of viewing
-            embed=discord.Embed(title=f"Notes for: {target}", description=f"Total notes: {cursor.rowcount}", color=0xf1d592)
-            for row in rows:
-                embed.add_field(name=f'{row["timestamp"]} UTC-5 (Central Time) | {row["type"]} by {row["adminckey"]}',value=row["text"])
-            await ctx.send(embed=embed)
-
-        except mysql.connector.Error as err:
-            embed=discord.Embed(title=f"Error looking up notes for: {target}", description=f"{format(err)}", color=0xff0000)
-            await ctx.send(embed=embed)
-
-        except ModuleNotFoundError:
-            await ctx.send("`mysql-connector` requirement not found! Please install this requirement using `pip install mysql-connector`.")
+            return rows
+        
+        except:
+            raise #We want to handle the exception external to this function
 
         finally:
             if cursor is not None:
