@@ -219,6 +219,8 @@ class SS13Status(BaseCog):
             #Reported time is in seconds, we need to convert that to be easily understood
             duration = int(*data['round_duration'])
             duration = time.strftime('%H:%M', time.gmtime(duration))
+            #Players also includes the number of admins, so we need to do some quick math
+            players = (int(*data['players']) - int(*data['admins'])) 
 
             #Might make the embed configurable at a later date
 
@@ -226,9 +228,9 @@ class SS13Status(BaseCog):
             embed.add_field(name="Version", value=str(*data['version']), inline=True)
             embed.add_field(name="Map", value=str(*data['map_name']), inline=True)
             embed.add_field(name="Mode", value=str(*data['mode']), inline=True)
-            embed.add_field(name="Players", value=str(*data['players']), inline=True)
+            embed.add_field(name="Players", value=players, inline=True)
             embed.add_field(name="Admins", value=str(*data['admins']), inline=True)
-            embed.add_field(name="Round Duration", value=f"{duration}", inline=True)
+            embed.add_field(name="Round Duration", value=duration, inline=True)
             embed.add_field(name="Server Link:", value=f"{server_url}", inline=False)
 
             try:
