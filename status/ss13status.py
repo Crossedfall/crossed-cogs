@@ -248,7 +248,7 @@ class SS13Status(BaseCog):
         conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
         try:
             query = b"\x00\x83" + struct.pack('>H', len(querystr) + 6) + b"\x00\x00\x00\x00\x00" + querystr.encode() + b"\x00" #Creates a packet for byond according to TG's standard
-            conn.settimeout(5) #Byond is slow, timeout set relatively high to account for any latency
+            conn.settimeout(10) #Byond is slow, timeout set relatively high to account for any latency
             conn.connect((game_server, game_port)) 
 
             conn.sendall(query)
@@ -288,23 +288,21 @@ class SS13Status(BaseCog):
 
         finally:
             conn.close()
-    
-    async def spam_check(self):
-        await asyncio.sleep(300)
-
-        global antispam
-        antispam = 0
 
     async def data_handler(self, reader, writer):
+        ###############
+        #Data Handling#
+        ###############
         data = await reader.read(10000)
         msg = data.decode()
         msg = msg.split(" ")[1] #Drop the 'GET'
         parsed_data = urllib.parse.parse_qs(msg[2:len(msg)]) #Drop the leading ?/ and make the text readable
 
-        await self.message_handler(parsed_data)
         writer.close()
-
-    async def message_handler(self, parsed_data = dict):
+        
+        ##################
+        #Message Handling#
+        ##################
         global antispam
         global newroundmsg
         admin_channel = await self.config.admin_notice_channel()
@@ -331,18 +329,20 @@ class SS13Status(BaseCog):
                     await self.bot.get_channel(admin_channel).send(embed=embed)
 
                 elif "@here" in announce and antispam == 0: #Ping any online admins once every 5 minutes
-                    if "ticket" in announce:
+                    if "A new ticket" in announce:
                         await self.bot.get_channel(admin_channel).send(f"@here - A new ticket was submitted but no admins appear to be online.\n")
                         
                         antispam = 1
-                        await self.spam_check()
+                        await asyncio.sleep(300)
+                        antispam = 0
 
                     else:
                         await self.bot.get_channel(admin_channel).send(f"@here - A new round ending event requires/might need attention, but there are no admins online.\n")
 
                         antispam = 1
-                        await self.spam_check()
-
+                        await asyncio.sleep(300)
+                        antispam = 0
+                
                 elif "@here" not in announce: 
                     embed = discord.Embed(title=announce, color=0xf95100)
                     await self.bot.get_channel(admin_channel).send(embed=embed)
