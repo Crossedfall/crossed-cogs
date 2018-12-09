@@ -196,6 +196,53 @@ class SS13Status(BaseCog):
         
         await ctx.send(embed=embed)
 
+    @checks.mod_or_permissions(administrator=True)
+    @commands.command()
+    async def players(self, ctx):
+        """
+        Lists the current players on the server
+        """
+        server = await self.config.server()
+        port = await self.config.game_port()
+        data = await self.query_server(server,port,"?whoIs")
+
+        if data:
+            try:
+                players = [i for i in data['players']]
+
+                embed = discord.Embed(title=f"__Current Players__ ({len(players)}): ", description=f'\n'.join(map(str,players)))
+
+                await ctx.send(embed=embed)
+            except KeyError:
+                await ctx.send("Unable to determine who is playing! Please check the world topic to ensure it is correctly configured.")
+        else:
+            await ctx.send(embed=discord.Embed(title="__Current Players__ (0):", description="No players current online"))
+
+
+    @checks.mod_or_permissions(administrator=True)
+    @commands.command()
+    async def adminwho(self, ctx):
+        """
+        List the current admins on the server
+        """
+        server = await self.config.server()
+        port = await self.config.game_port()
+        data = await self.query_server(server,port,"?adminwho")
+
+        if data:
+            try:
+                admins = [i for i in data['admins']]
+
+                embed = discord.Embed(title=f"__Current Admins__ ({len(admins)}): ", description=f'\n'.join(map(str,admins)))
+
+                await ctx.send(embed=embed)
+            except KeyError:
+                await ctx.send("Unable to determine who is administrating! Please check the world topic to ensure it is correctly configured.")
+        else:
+            await ctx.send(embed=discord.Embed(title="__Current Admins__ (0):", description="No Admins are current online"))
+        
+
+
     @commands.guild_only()
     @commands.command()
     @commands.cooldown(1, 5)
@@ -225,11 +272,14 @@ class SS13Status(BaseCog):
             #Might make the embed configurable at a later date
 
             embed=discord.Embed(color=0x26eaea)
-            embed.add_field(name="Version", value=str(*data['version']), inline=True)
-            embed.add_field(name="Map", value=str(*data['map_name']), inline=True)
-            embed.add_field(name="Mode", value=str(*data['mode']), inline=True)
+            embed.add_field(name="Map", value=str.title(*data['map_name']), inline=True)
+            embed.add_field(name="Security Level", value=str.title(*data['security_level']), inline=True)
+            if ("docked" or "call") not in data['shuttle_mode']:
+                embed.add_field(name="Shuttle Status", value=str.title(*data['shuttle_mode']), inline=True)
+            else:
+                embed.add_field(name="Shuttle Timer", value=time.strftime('%M:%S', time.gmtime(int(*data['shuttle_timer']))), inline=True)
             embed.add_field(name="Players", value=players, inline=True)
-            embed.add_field(name="Admins", value=str(*data['admins']), inline=True)
+            embed.add_field(name="Admins", value=int(*data['admins']), inline=True)
             embed.add_field(name="Round Duration", value=duration, inline=True)
             embed.add_field(name="Server Link:", value=f"{server_url}", inline=False)
 
@@ -240,11 +290,10 @@ class SS13Status(BaseCog):
                 statusmsg = await ctx.send(embed=embed)
         
 
-    async def query_server(self, game_server:str, game_port:int ) -> dict:
+    async def query_server(self, game_server:str, game_port:int, querystr="?status" ) -> dict:
         """
         Queries the server for information
         """
-        querystr = "?status" #Might expand on this later to allow extra queries so I'm making this a separate string for now
         conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
         try:
             query = b"\x00\x83" + struct.pack('>H', len(querystr) + 6) + b"\x00\x00\x00\x00\x00" + querystr.encode() + b"\x00" #Creates a packet for byond according to TG's standard
