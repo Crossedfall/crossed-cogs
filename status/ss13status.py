@@ -227,7 +227,7 @@ class SS13Status(BaseCog):
         """
         server = await self.config.server()
         port = await self.config.game_port()
-        data = await self.query_server(server,port,"?adminwho")
+        data = await self.query_server(server,port,"?adminWho")
 
         if data:
             try:
