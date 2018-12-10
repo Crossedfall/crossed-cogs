@@ -196,7 +196,7 @@ class SS13Status(BaseCog):
         
         await ctx.send(embed=embed)
 
-    @checks.mod_or_permissions(administrator=True)
+    @commands.guild_only()
     @commands.command()
     async def players(self, ctx):
         """
@@ -218,8 +218,7 @@ class SS13Status(BaseCog):
         else:
             await ctx.send(embed=discord.Embed(title="__Current Players__ (0):", description="No players current online"))
 
-
-    @checks.mod_or_permissions(administrator=True)
+    @commands.guild_only()
     @commands.command()
     async def adminwho(self, ctx):
         """
