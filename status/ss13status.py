@@ -40,6 +40,7 @@ class SS13Status(BaseCog):
             "server_url": "byond://127.0.0.1:7777", 
             "new_round_channel": None,
             "admin_notice_channel": None,
+            "mention_role": None,
             "comms_key": "default_pwd",
             "listen_port": 8081,
         }
@@ -126,7 +127,7 @@ class SS13Status(BaseCog):
         """
         try: 
             await self.config.new_round_channel.set(text_channel.id)
-            await ctx.send(f"New round notifications will be sent to: <#{text_channel.id}>")
+            await ctx.send(f"New round notifications will be sent to: {text_channel.mention}")
 
         except(ValueError, KeyError, AttributeError):
             await ctx.send("There was a problem setting the notification channel. Please check your entry and try again.")
@@ -139,10 +140,24 @@ class SS13Status(BaseCog):
         """
         try:
             await self.config.admin_notice_channel.set(text_channel.id)
-            await ctx.send(f"Admin notifications will be sent to: <#{text_channel.id}>")
+            await ctx.send(f"Admin notifications will be sent to: {text_channel.mention}")
 
         except(ValueError, KeyError, AttributeError):
             await ctx.send("There was a problem setting the notification channel. Please check your entry and try again.")
+
+    @setstatus.command()
+    @checks.is_owner()
+    async def mentionrole(self, ctx, role: discord.Role):
+        """
+        Sets a role to mention in new round notifications
+        """
+        try:
+         await self.config.mention_role.set(role.id)
+         await ctx.send(f"New round notifications will now mention the `{role.name}` role.")
+
+        except(ValueError, KeyError, AttributeError):
+            await ctx.send("There was a problem setting the mention role. Please check your entry and try again.")
+
 
     @setstatus.command()
     @checks.is_owner()
@@ -189,8 +204,11 @@ class SS13Status(BaseCog):
         for k, v in settings.items():
             if k is 'comms_key': #We don't want to actively display the comms key
                 embed.add_field(name=f"{k}:", value="`redacted`", inline=False)
-            elif k is 'new_round_channel' or k is 'admin_notice_channel': #Linkify channels
+            elif (k is 'new_round_channel' or k is 'admin_notice_channel') and (v is not None): #Linkify channels
                 embed.add_field(name=f"{k}:", value=f"<#{v}>", inline=False)
+            elif k is 'mention_role':
+                role = discord.utils.get(ctx.guild.roles, id=await self.config.mention_role())
+                embed.add_field(name=f"{k}:", value=role.name)
             else:
                 embed.add_field(name=f"{k}:", value=v, inline=False)
         
@@ -353,8 +371,9 @@ class SS13Status(BaseCog):
         ##################
         global antispam
         global newroundmsg
-        admin_channel = await self.config.admin_notice_channel()
-        new_round_channel = await self.config.new_round_channel()
+        admin_channel = self.bot.get_channel(await self.config.admin_notice_channel())
+        new_round_channel = self.bot.get_channel(await self.config.new_round_channel())
+        mention_role = discord.utils.get(admin_channel.guild.roles, id=(await self.config.mention_role()))
         comms_key = await self.config.comms_key()
         byondurl = await self.config.server_url()
         parser = htmlparser.HTMLParser()
@@ -362,11 +381,37 @@ class SS13Status(BaseCog):
         if ('key' in parsed_data) and (comms_key in parsed_data['key']): #Check to ensure that we're only serving messages from our game
             if ('serverStart' in parsed_data) and (new_round_channel is not None):
                 embed = discord.Embed(title="Starting new round!", description=byondurl, color=0x8080ff)
+
                 try:
                     await newroundmsg.delete()
-                    newroundmsg = await self.bot.get_channel(new_round_channel).send(embed=embed)
+                    if mention_role is not None:
+                        try:
+                            await mention_role.edit(mentionable=True)
+                            newroundmsg = await new_round_channel.send(mention_role.mention)
+                            await mention_role.edit(mentionable=False)
+                            await newroundmsg.edit(embed=embed)
+
+                        except(discord.Forbidden):
+                            await admin_channel.send(f"Mentions are configured, but I don't have permissions to edit {mention_role.mention}")
+                            newroundmsg = await new_round_channel.send(embed=embed)
+
+                    else:
+                        newroundmsg = await new_round_channel.send(embed=embed)
+
                 except(discord.DiscordException, AttributeError):
-                    newroundmsg = await self.bot.get_channel(new_round_channel).send(embed=embed)
+                    if mention_role is not None:
+                        try:
+                            await mention_role.edit(mentionable=True)
+                            newroundmsg = await new_round_channel.send(mention_role.mention)
+                            await mention_role.edit(mentionable=False)
+                            await newroundmsg.edit(embed=embed)
+
+                        except(discord.Forbidden):
+                            await admin_channel.send(f"Mentions are configured, but I don't have permissions to edit {mention_role.mention}")
+                            newroundmsg = await new_round_channel.send(embed=embed)
+
+                    else:
+                        newroundmsg = await new_round_channel.send(embed=embed)
 
             elif ('announce_channel' in parsed_data) and ('admin' in parsed_data['announce_channel']): #Secret messages only meant for admin eyes
                 announce = str(*parsed_data['announce'])
@@ -374,18 +419,18 @@ class SS13Status(BaseCog):
                     ticket = announce.split('): ')
                     ticket[1] = parser.unescape(ticket[1])
                     embed = discord.Embed(title=f"{ticket[0]}):", description=ticket[1],color=0xff0000)
-                    await self.bot.get_channel(admin_channel).send(embed=embed)
+                    await admin_channel.send(embed=embed)
 
                 elif "@here" in announce and antispam == 0: #Ping any online admins once every 5 minutes
                     if "A new ticket" in announce:
-                        await self.bot.get_channel(admin_channel).send(f"@here - A new ticket was submitted but no admins appear to be online.\n")
+                        await admin_channel.send(f"@here - A new ticket was submitted but no admins appear to be online.\n")
                         
                         antispam = 1
                         await asyncio.sleep(300)
                         antispam = 0
 
                     else:
-                        await self.bot.get_channel(admin_channel).send(f"@here - A new round ending event requires/might need attention, but there are no admins online.\n")
+                        await admin_channel.send(f"@here - A new round ending event requires/might need attention, but there are no admins online.\n")
 
                         antispam = 1
                         await asyncio.sleep(300)
@@ -393,7 +438,7 @@ class SS13Status(BaseCog):
                 
                 elif "@here" not in announce: 
                     embed = discord.Embed(title=announce, color=0xf95100)
-                    await self.bot.get_channel(admin_channel).send(embed=embed)
+                    await admin_channel.send(embed=embed)
 
                 else: #If it's not one of the above, it's not worth serving
                     pass
