@@ -14,7 +14,7 @@ import discord
 #Redbot Imports
 from redbot.core import commands, checks, Config, utils
 
-__version__ = "0.9.0"
+__version__ = "0.9.2"
 __author__ = "Crossedfall"
 
 BaseCog = getattr(commands, "Cog", object)
@@ -208,7 +208,10 @@ class SS13Status(BaseCog):
                 embed.add_field(name=f"{k}:", value=f"<#{v}>", inline=False)
             elif k is 'mention_role':
                 role = discord.utils.get(ctx.guild.roles, id=await self.config.mention_role())
-                embed.add_field(name=f"{k}:", value=role.name)
+                if role is not None:
+                    embed.add_field(name=f"{k}:", value=role.name)
+                else:
+                    embed.add_field(name=f"{k}:", value=v)
             else:
                 embed.add_field(name=f"{k}:", value=v, inline=False)
         
