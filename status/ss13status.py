@@ -350,7 +350,7 @@ class SS13Status(BaseCog):
             | shuttle_mode   | str    |
             | shuttle_timer  | str    |
             +----------------+--------+
-            """
+            """ #pylint: disable=unreachable
             
         except (ConnectionRefusedError, socket.gaierror, socket.timeout):
             return None #Server is likely offline
@@ -410,7 +410,7 @@ class SS13Status(BaseCog):
                             await newroundmsg.edit(embed=embed)
 
                         except(discord.Forbidden):
-                            await admin_channel.send(f"Mentions are configured, but I don't have permissions to edit {mention_role.mention}")
+                            await admin_channel.send(f"Mentions are configured, but I don't have permissions to edit {mention_role.name}")
                             newroundmsg = await new_round_channel.send(embed=embed)
 
                     else:
