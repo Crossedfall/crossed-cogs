@@ -8,7 +8,7 @@ These are utility cogs explicitly intended for SS13 servers leveraging off of th
 
 | Cog      | Description                                                  |
 | -------- | ------------------------------------------------------------ |
-| GetNotes | Pulls player notes from an SS13 [/TG/](https://github.com/tgstation/tgstation) schemed database <br /><br />*Requires: Mysql-connector* -- `pip install mysql-connector` |
+| GetNotes | Pulls player notes from an SS13 [/TG/](https://github.com/tgstation/tgstation) schemed database <br /><br />*Requires: mysql-connector-python>=8.0* -- `pip install mysql-connector-python` |
 | Status   | Obtains the current status of a hosted SS13 round and pertinent admin pings (e.g. Ahelps, round ending events, custom pings) |
 
 ## Setup

@@ -1,10 +1,10 @@
 {
     "author": ["Crossedfall (Crossedfall#1001)"],
-    "install_msg": "Thank you for installing getnotes! Please note that the `setnotesdatabase` commands are owner only",
+    "install_msg": "Thank you for installing getnotes! Please note that the `setnotesdatabase` commands are owner only\nsee the [readme](https://github.com/crossedfall/crossed-cogs#getnotes) for detailed setup instructions.",
     "name": "SS13 Notes Helper",
     "short": "Obtains player notes and posts them into discord on command!",
     "requirements": [
-        "mysql-connector"
+        "mysql-connector-python>=8.0"
     ],
     "description": "Pulls player notes from your database. TG Scheme required",
     "permissions" : ["Manage Messages", "Embed Links"],
