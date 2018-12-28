@@ -33,13 +33,13 @@ class GetNotes(BaseCog):
     
     @commands.guild_only()
     @commands.group()
-    async def setnotesdatabase(self,ctx):
+    async def setnotes(self,ctx): 
         """
         SS13 MySQL database settings
         """
         pass
     
-    @setnotesdatabase.command()
+    @setnotes.command()
     @checks.is_owner()
     async def host(self, ctx, db_host: str):
         """
@@ -52,7 +52,7 @@ class GetNotes(BaseCog):
         except(ValueError):
             await ctx.send(f"{db_host} is not a valid ip address!")
     
-    @setnotesdatabase.command()
+    @setnotes.command()
     @checks.is_owner()
     async def port(self, ctx, db_port: int):
         """
@@ -67,7 +67,7 @@ class GetNotes(BaseCog):
         except (ValueError, KeyError, AttributeError):
             await ctx.send("There was a problem setting your port. Please check to ensure you're attempting to use a port from 1024 to 65535") 
     
-    @setnotesdatabase.command(aliases=['name', 'user'])
+    @setnotes.command(aliases=['name', 'user'])
     @checks.is_owner()
     async def username(self,ctx,user: str):
         """
@@ -81,7 +81,7 @@ class GetNotes(BaseCog):
         except (ValueError, KeyError, AttributeError):
             await ctx.send("There was a problem setting the username for your database.")
     
-    @setnotesdatabase.command()
+    @setnotes.command()
     @checks.is_owner()
     async def password(self,ctx,passwd: str):
         """
@@ -99,7 +99,7 @@ class GetNotes(BaseCog):
         except (ValueError, KeyError, AttributeError):
             await ctx.send("There was a problem setting the password for your database.")
 
-    @setnotesdatabase.command(aliases=["db"])
+    @setnotes.command(aliases=["db"])
     @checks.is_owner()
     async def database(self,ctx,db: str):
         """
@@ -111,7 +111,7 @@ class GetNotes(BaseCog):
         except (ValueError, KeyError, AttributeError):
             await ctx.send ("There was a problem setting your notes database.")
     
-    @setnotesdatabase.command()
+    @setnotes.command()
     @checks.admin_or_permissions(administrator=True)
     async def current(self,ctx):
         """
@@ -191,7 +191,7 @@ class GetNotes(BaseCog):
             return rows
         
         except:
-            raise #We want to handle the exception external to this function
+            raise 
 
         finally:
             if cursor is not None:
