@@ -126,24 +126,6 @@ class GetNotes(BaseCog):
                 else:
                     embed.add_field(name=f"{k}:",value="`redacted`",inline=False)
         await ctx.send(embed=embed)
-    
-    @checks.mod_or_permissions(administrator=True)
-    @commands.guild_only()
-    @commands.group(autohelp=False)
-    async def registerckey(self, ctx, ckey: str):
-        """
-        Allows admins to register their ckey and perform admin actions from discord
-        """
-        admins = await self.config.guild(ctx.guild).admin_ckey()
-        if ckey in admins:
-            await ctx.send("Ckey already registered!")
-        else:
-            if ctx.message.author.id not in admins.values():
-                admins[ckey] = ctx.message.author.id
-                await ctx.send(f"Your ckey has been set to: `{ckey}`")
-                await self.config.guild(ctx.guild).admin_ckey.set(admins)
-            else:
-                await ctx.send("You already have a ckey registered to your user!")
 
     @checks.mod_or_permissions(administrator=True)
     @commands.command()
@@ -151,7 +133,7 @@ class GetNotes(BaseCog):
         """
         Gets the notes for a specific player
         """
-        query = f"SELECT timestamp, adminckey, text, type FROM messages WHERE targetckey='{player.lower()}'"
+        query = f"SELECT timestamp, adminckey, text, type FROM messages WHERE targetckey='{player.lower()}' ORDER BY timestamp DESC"
         message = await ctx.send("Getting player notes...")
 
         try:
@@ -159,7 +141,7 @@ class GetNotes(BaseCog):
             # Parse the data into individual fields within an embeded message in Discord for ease of viewing
             embed=discord.Embed(title=f"Notes for: {player}", description=f"Total notes: {len(rows)}", color=0xf1d592)
             for row in rows:
-                embed.add_field(name=f'{row["timestamp"]} UTC-5 (Central Time) | {row["type"]} by {row["adminckey"]}',value=row["text"])
+                embed.add_field(name=f'{row["timestamp"]} UTC-5 (Central Time) | {row["type"]} by {row["adminckey"]}',value=row["text"], inline=False)
             await message.edit(content=None,embed=embed)
         
         except mysql.connector.Error as err:
@@ -183,7 +165,7 @@ class GetNotes(BaseCog):
 
         try:
             # Establish a connection with the database and pull the relevant data
-            conn = mysql.connector.connect(host=db_host,port=db_port,database=db,user=db_user,password=db_pass, connect_timeout=2)
+            conn = mysql.connector.connect(host=db_host,port=db_port,database=db,user=db_user,password=db_pass, connect_timeout=5)
             cursor = conn.cursor(dictionary=True)
             cursor.execute(query)
             rows = cursor.fetchall()
