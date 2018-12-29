@@ -22,13 +22,10 @@ BaseCog = getattr(commands, "Cog", object)
 class SS13Status(BaseCog):
 
     def __init__(self, bot):
-        global serv #Will be the task responsible for incoming game data
-        global antispam #Used to prevent @here mention spam
-        global statusmsg #Used to delete the status message
-        global newroundmsg #Used to delete the new round notification
-        newroundmsg = None
-        statusmsg  = None
-        antispam = 0
+        self.serv = None #Will be the task responsible for incoming game data
+        self.antispam = None #Used to prevent @here mention spam
+        self.statusmsg = None #Used to delete the status message
+        self.newroundmsg = None #Used to delete the new round notification
 
         self.bot = bot
         self.config = Config.get_conf(self, 3257193194, force_registration=True)
@@ -46,16 +43,15 @@ class SS13Status(BaseCog):
         }
 
         self.config.register_global(**default_global)
-        serv = bot.loop.create_task(self.listener())
+        self.serv = bot.loop.create_task(self.listener())
     
     def __unload(self):
-        serv.cancel()
+        self.serv.cancel()
 
     async def changed_port(self, ctx, port: int):
-        global serv
-        serv.cancel()
+        self.serv.cancel()
         await asyncio.sleep(5) 
-        serv = self.bot.loop.create_task(self.listener())
+        self.serv = self.bot.loop.create_task(self.listener())
         await ctx.send(f"Listening on port: {port}")
 
     @commands.guild_only()
@@ -270,7 +266,6 @@ class SS13Status(BaseCog):
         """
         Gets the current server status and round details
         """
-        global statusmsg
         server = await self.config.server()
         port = await self.config.game_port()        
         msg = await self.config.offline_message()
@@ -304,10 +299,10 @@ class SS13Status(BaseCog):
             embed.add_field(name="Server Link:", value=f"{server_url}", inline=False)
 
             try:
-                await statusmsg.delete()
-                statusmsg = await ctx.send(embed=embed)
+                await self.statusmsg.delete()
+                self.statusmsg = await ctx.send(embed=embed)
             except(discord.DiscordException, AttributeError):
-                statusmsg = await ctx.send(embed=embed)
+                self.statusmsg = await ctx.send(embed=embed)
         
 
     async def query_server(self, game_server:str, game_port:int, querystr="?status" ) -> dict:
@@ -372,8 +367,6 @@ class SS13Status(BaseCog):
         ##################
         #Message Handling#
         ##################
-        global antispam
-        global newroundmsg
         admin_channel = self.bot.get_channel(await self.config.admin_notice_channel())
         new_round_channel = self.bot.get_channel(await self.config.new_round_channel())
         mention_role = discord.utils.get(admin_channel.guild.roles, id=(await self.config.mention_role()))
@@ -386,35 +379,35 @@ class SS13Status(BaseCog):
                 embed = discord.Embed(title="Starting new round!", description=byondurl, color=0x8080ff)
 
                 try:
-                    await newroundmsg.delete()
+                    await self.newroundmsg.delete()
                     if mention_role is not None:
                         try:
                             await mention_role.edit(mentionable=True)
-                            newroundmsg = await new_round_channel.send(mention_role.mention)
+                            self.newroundmsg = await new_round_channel.send(mention_role.mention)
                             await mention_role.edit(mentionable=False)
-                            await newroundmsg.edit(embed=embed)
+                            await self.newroundmsg.edit(embed=embed)
 
                         except(discord.Forbidden):
                             await admin_channel.send(f"Mentions are configured, but I don't have permissions to edit {mention_role.mention}")
-                            newroundmsg = await new_round_channel.send(embed=embed)
+                            self.newroundmsg = await new_round_channel.send(embed=embed)
 
                     else:
-                        newroundmsg = await new_round_channel.send(embed=embed)
+                        self.newroundmsg = await new_round_channel.send(embed=embed)
 
                 except(discord.DiscordException, AttributeError):
                     if mention_role is not None:
                         try:
                             await mention_role.edit(mentionable=True)
-                            newroundmsg = await new_round_channel.send(mention_role.mention)
+                            self.newroundmsg = await new_round_channel.send(mention_role.mention)
                             await mention_role.edit(mentionable=False)
-                            await newroundmsg.edit(embed=embed)
+                            await self.newroundmsg.edit(embed=embed)
 
                         except(discord.Forbidden):
                             await admin_channel.send(f"Mentions are configured, but I don't have permissions to edit {mention_role.name}")
-                            newroundmsg = await new_round_channel.send(embed=embed)
+                            self.newroundmsg = await new_round_channel.send(embed=embed)
 
                     else:
-                        newroundmsg = await new_round_channel.send(embed=embed)
+                        self.newroundmsg = await new_round_channel.send(embed=embed)
 
             elif ('announce_channel' in parsed_data) and ('admin' in parsed_data['announce_channel']): #Secret messages only meant for admin eyes
                 announce = str(*parsed_data['announce'])
@@ -424,20 +417,20 @@ class SS13Status(BaseCog):
                     embed = discord.Embed(title=f"{ticket[0]}):", description=ticket[1],color=0xff0000)
                     await admin_channel.send(embed=embed)
 
-                elif "@here" in announce and antispam == 0: #Ping any online admins once every 5 minutes
+                elif "@here" in announce and self.antispam == 0: #Ping any online admins once every 5 minutes
                     if "A new ticket" in announce:
                         await admin_channel.send(f"@here - A new ticket was submitted but no admins appear to be online.\n")
                         
-                        antispam = 1
+                        self.antispam = 1
                         await asyncio.sleep(300)
-                        antispam = 0
+                        self.antispam = 0
 
                     else:
                         await admin_channel.send(f"@here - A new round ending event requires/might need attention, but there are no admins online.\n")
 
-                        antispam = 1
+                        self.antispam = 1
                         await asyncio.sleep(300)
-                        antispam = 0
+                        self.antispam = 0
                 
                 elif "@here" not in announce: 
                     embed = discord.Embed(title=announce, color=0xf95100)
