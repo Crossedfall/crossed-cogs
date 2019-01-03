@@ -153,6 +153,6 @@ For questions or concerns, feel free to submit a new [issue](https://github.com/
 
 ### Credits:
 
-- [Monster860](https://github.com/monster860) for his subsystem template
+- [Tigercat2000](https://github.com/tigercat2000) for his subsystem template
 - The [/TG/ community](https://github.com/tgstation) for their efforts on SS13 
 - The [Cog-Creators](https://github.com/Cog-Creators) staff for their work on redbot
