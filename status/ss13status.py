@@ -40,6 +40,7 @@ class SS13Status(BaseCog):
             "mention_role": None,
             "comms_key": "default_pwd",
             "listen_port": 8081,
+            "timeout": 10,
         }
 
         self.config.register_global(**default_global)
@@ -189,6 +190,18 @@ class SS13Status(BaseCog):
             await ctx.send("There was a problem setting your port. Please check to ensure you're attempting to use a port from 1024 to 65535")
 
     @setstatus.command()
+    @checks.is_owner()
+    async def timeout(self, ctx, seconds: int):
+        """
+        Sets the timeout duration for server status checks (in seconds)
+        """
+        try:
+            await self.config.timeout.set(seconds)
+            await ctx.send(f"Timeout duration set to: `{seconds} seconds`")
+        except(ValueError, KeyError, AttributeError):
+            await ctx.send("There was a problem setting the timeout duration. Please check your input and try again.")
+
+    @setstatus.command()
     @checks.admin_or_permissions(administrator=True)
     async def current(self, ctx):
         """
@@ -208,6 +221,8 @@ class SS13Status(BaseCog):
                     embed.add_field(name=f"{k}:", value=role.name)
                 else:
                     embed.add_field(name=f"{k}:", value=v)
+            elif k is 'timeout':
+                embed.add_field(name=f"{k}:", value=f"{v} seconds")
             else:
                 embed.add_field(name=f"{k}:", value=v, inline=False)
         
@@ -310,9 +325,10 @@ class SS13Status(BaseCog):
         Queries the server for information
         """
         conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
+        timeout = self.config.timeout()
         try:
             query = b"\x00\x83" + struct.pack('>H', len(querystr) + 6) + b"\x00\x00\x00\x00\x00" + querystr.encode() + b"\x00" #Creates a packet for byond according to TG's standard
-            conn.settimeout(10) #Byond is slow, timeout set relatively high to account for any latency
+            conn.settimeout(timeout) #Byond is slow, timeout set relatively high to account for any latency
             conn.connect((game_server, game_port)) 
 
             conn.sendall(query)
