@@ -325,10 +325,10 @@ class SS13Status(BaseCog):
         Queries the server for information
         """
         conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
-        timeout = self.config.timeout()
+
         try:
             query = b"\x00\x83" + struct.pack('>H', len(querystr) + 6) + b"\x00\x00\x00\x00\x00" + querystr.encode() + b"\x00" #Creates a packet for byond according to TG's standard
-            conn.settimeout(timeout) #Byond is slow, timeout set relatively high to account for any latency
+            conn.settimeout(await self.config.timeout()) #Byond is slow, timeout set relatively high to account for any latency
             conn.connect((game_server, game_port)) 
 
             conn.sendall(query)
