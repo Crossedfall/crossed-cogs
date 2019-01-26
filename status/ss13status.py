@@ -23,7 +23,7 @@ class SS13Status(BaseCog):
 
     def __init__(self, bot):
         self.serv = None #Will be the task responsible for incoming game data
-        self.antispam = None #Used to prevent @here mention spam
+        self.antispam = 0 #Used to prevent @here mention spam
         self.statusmsg = None #Used to delete the status message
         self.newroundmsg = None #Used to delete the new round notification
 
