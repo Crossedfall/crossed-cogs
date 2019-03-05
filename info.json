@@ -1,9 +1,8 @@
 {
     "author" : ["Crossedfall (Crossedfall#1001)"],
-    "install_msg" : "Utility cogs for SS13",
+    "install_msg" : "Most of these cogs were written for my personal use- use at your own risk.",
     "name" : "CrossedCogs",
-    "short" : "SS13 cogs",
-    "requirements": ["mysql-connector-python>=8.0"],
-    "description" : "Notes and Status cogs for SS13 servers",
-    "tags" : ["Fun", "SS13", "Utility", "Administration"]
+    "short" : "Misc cogs",
+    "description" : "Random unsorted cogs",
+    "tags" : ["Fun", "Utility", "Administration"]
 }
