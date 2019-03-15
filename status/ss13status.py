@@ -14,7 +14,7 @@ import discord
 #Redbot Imports
 from redbot.core import commands, checks, Config, utils
 
-__version__ = "0.9.2"
+__version__ = "0.9.3"
 __author__ = "Crossedfall"
 
 BaseCog = getattr(commands, "Cog", object)
@@ -441,6 +441,9 @@ class SS13Status(BaseCog):
                         await asyncio.sleep(300)
                         self.antispam = 0
 
+                    elif 4 in parsed_data['gamestate']:
+                        await admin_channel.send(f"End-round activity detected.\n")
+                    
                     else:
                         await admin_channel.send(f"@here - A new round ending event requires/might need attention, but there are no admins online.\n")
 
