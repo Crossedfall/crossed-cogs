@@ -10,10 +10,8 @@ import discord
 
 #Redbot Imports
 from redbot.core import commands, checks, Config, utils
-from redbot.core.utils.chat_formatting import box
 from redbot.core.utils.menus import (
     menu,
-    DEFAULT_CONTROLS,
     prev_page,
     next_page,
     close_menu,
@@ -50,12 +48,25 @@ class NoteKeeper(BaseCog):
             await ctx.send("Your note has been saved!")
         except (ValueError, AttributeError, KeyError):
             await ctx.send("I ran into a problem saving your note! Please check your note and try again.")
+
+    @commands.command()
+    async def deletenote(self, ctx):
+        """
+        Allows you to delete one of your notes
+
+        Alternative command for [p]viewnotes true
+        """
+        await self.shownotes(ctx, True)
+
         
     @commands.command()
-    async def viewnotes(self, ctx): #Heavily borrowed from the Audio cog to make this
+    async def viewnotes(self, ctx, delete = False):
         """
         List all of your notes
         """
+        await self.shownotes(ctx, delete)
+
+    async def shownotes(self, ctx, delete = False): #Heavily borrowed from the Audio cog to make this. Aik is my hero.
 
         async def _notes_menu(
             ctx: commands.Context,
@@ -67,7 +78,7 @@ class NoteKeeper(BaseCog):
             emoji: str,
         ):
             if message:
-                await self._notes_button_action(ctx, all_notes, emoji, page)
+                await self._notes_button_action(ctx, all_notes, emoji, page, delete)
                 await message.delete()
                 return None
 
@@ -81,20 +92,25 @@ class NoteKeeper(BaseCog):
             "❌": close_menu,
             "➡": next_page,
         }
-        notes = []
-        all_notes = await self.config.user(ctx.author).notes()
-        for index, (k,v) in enumerate(all_notes.items()):
-            brief = v[:75] + (v[75:] and '...')
-            note = {'Number':index, 'Date':datetime.strptime(k, '%Y-%m-%d %H:%M:%S.%f').date(), 'Note':brief}
-            notes.append(note)
-        
-        len_note_pages = math.ceil(len(notes) / 5)
-        notes_page_list = []
-        for page_num in range(1, len_note_pages + 1):
-            embed = await self._build_notes_list(ctx, notes, page_num)
-            notes_page_list.append(embed)
 
-        await menu(ctx, notes_page_list, MENU_CONTROLS)
+        try:
+            notes = []
+            all_notes = await self.config.user(ctx.author).notes()
+            for index, (k,v) in enumerate(all_notes.items()):
+                brief = v[:75] + (v[75:] and '...')
+                note = {'Number':index, 'Date':datetime.strptime(k, '%Y-%m-%d %H:%M:%S.%f').date(), 'Note':brief}
+                notes.append(note)
+            
+            len_note_pages = math.ceil(len(notes) / 5)
+            notes_page_list = []
+            for page_num in range(1, len_note_pages + 1):
+                embed = await self._build_notes_list(ctx, notes, page_num)
+                notes_page_list.append(embed)
+
+            await menu(ctx, notes_page_list, MENU_CONTROLS)
+
+        except IndexError:
+            await ctx.send("You do not currently have any notes.")
 
     async def _build_notes_list(self, ctx, notes, page_num):
         notes_num_pages = math.ceil(len(notes) / 5)
@@ -127,13 +143,16 @@ class NoteKeeper(BaseCog):
         )
         return embed
 
-    async def _notes_button_action(self, ctx, notes, emoji, page):
-        def get_nth_note(dict,  n=0):
+    async def _notes_button_action(self, ctx, notes, emoji, page, delete):
+        def get_nth_note(dict,  n=0, returnkey = False):
             if n < 0:
                 n += len(dict)
             for i, key in enumerate(dict.keys()):
                 if i == n:
-                    return (dict[key])
+                    if returnkey is False:
+                        return (dict[key])
+                    else:
+                        return (key)
             raise IndexError
 
         if emoji == "1⃣":
@@ -147,14 +166,33 @@ class NoteKeeper(BaseCog):
         if emoji == "5⃣":
             search_choice = 4 + (page * 5)
 
-        try:
-            note = get_nth_note(notes, search_choice)
-            clean_date = datetime.strptime(list(notes.keys())[list(notes.values()).index(note)], '%Y-%m-%d %H:%M:%S.%f').date()
-            embed = discord.Embed(
-                color=0xf1d592, title=f"{clean_date}", description=note
-            )
 
-            await ctx.send(embed=embed)
-        except IndexError:
-            await ctx.send("Unable to get that note. Please try again and double check your selection.")
-        
+        if delete is False:
+            try:
+                note = get_nth_note(notes, search_choice)
+                clean_date = datetime.strptime(list(notes.keys())[list(notes.values()).index(note)], '%Y-%m-%d %H:%M:%S.%f').date()
+                embed = discord.Embed(
+                    color=0xf1d592, title=f"{clean_date}", description=note
+                )
+
+                await ctx.send(embed=embed)
+            except IndexError:
+                await ctx.send("Unable to get that note. Please try again and double check your selection.")
+        else:
+            
+            try:
+                note = get_nth_note(notes, search_choice)
+                clean_date = datetime.strptime(list(notes.keys())[list(notes.values()).index(note)], '%Y-%m-%d %H:%M:%S.%f').date()
+                embed = discord.Embed(
+                    color=0xf1d592, title=f"{clean_date}", description=note
+                )
+
+                key = get_nth_note(notes, search_choice, True)
+                del notes[key]
+                await self.config.user(ctx.author).notes.set(notes)
+                await ctx.send("The following note was deleted")
+
+                await ctx.send(embed=embed)
+            except IndexError:
+                await ctx.send("There was a problem deleting your note! Please run the command again and double check your selection.")
+    
