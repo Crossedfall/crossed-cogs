@@ -1,0 +1,19 @@
+{
+    "author": [
+        "Crossedfall (Crossedfall#1001)"
+    ],
+    "install_msg": "This cog is not functional. Do not use it.",
+    "name": "ProjectBreen (Working title)",
+    "short": "This cog is not current meant to be used",
+    "description": "Reacts to messages with Breen gifs",
+    "permissions": [
+        "Manage Messages",
+        "Embed Links"
+    ],
+    "tags": [
+        "Misc",
+        "Utility",
+        "Neil Breen",
+        "User cogs"
+    ]
+}
