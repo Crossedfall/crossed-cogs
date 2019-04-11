@@ -61,11 +61,6 @@ class BreenReacts(BaseCog):
             del currentChannels[str(channel.id)]
             await self.config.channels.set(currentChannels)
             await ctx.send(f"I've removed {channel} from the cult of Breen. It will no longer receive his blessing.")
-
-    @commands.command()
-    async def test(self, ctx, channel: discord.TextChannel):
-        conf = await self.config.channels()
-        await ctx.send((datetime.datetime.utcnow() - epoch).total_seconds() - conf[str(channel.id)])
     
     async def on_message(self, message):
         if message.author == self.bot.user:
