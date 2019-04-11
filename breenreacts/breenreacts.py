@@ -41,7 +41,7 @@ class BreenReacts(BaseCog):
         """
         currentChannels = await self.config.channels()
         if str(channel.id) not in currentChannels:
-                currentChannels[int(channel.id)] = (datetime.datetime.utcnow() - epoch).total_seconds()
+                currentChannels[int(channel.id)] = 0
                 await self.config.channels.set(currentChannels)
                 await ctx.send(f"I've added {channel} to the cult of Breen.")
         else:
