@@ -11,7 +11,7 @@ import discord
 from redbot.core import commands, checks, Config, utils
 from redbot.core.data_manager import bundled_data_path, cog_data_path
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __author__ = "Crossedfall"
 
 epoch = datetime.datetime.utcfromtimestamp(0)
@@ -26,6 +26,7 @@ class BreenReacts(BaseCog):
 
         default_global = {
             "channels": {},
+            "cooldown": 600
         }
 
         self.listofbreens = str(bundled_data_path(self) / 'listofbreens.yml')
@@ -62,6 +63,18 @@ class BreenReacts(BaseCog):
             await self.config.channels.set(currentChannels)
             await ctx.send(f"I've removed {channel} from the cult of Breen. It will no longer receive his blessing.")
     
+    @commands.command()
+    @commands.is_owner()
+    async def breendown(self, ctx, cooldown: int):
+        """
+        Sets the cooldown in seconds for how often Neil Breen will react to your chat (This is a global settings)
+        """
+        try:
+           await self.config.cooldown.set(cooldown) 
+           await ctx.send(f"Breen will wait {cooldown} seconds before reacting to messages.")
+        except(TypeError, KeyError, AttributeError):
+            await ctx.send("There was a problem setting the cooldown. Please check your entry and try again.")
+    
     async def on_message(self, message):
         if message.author == self.bot.user:
             return
@@ -70,11 +83,12 @@ class BreenReacts(BaseCog):
         if message.author.bot is True:
             return
         
-        conf = await self.config.channels()
+        channels = await self.config.channels()
+        cooldown = await self.config.cooldown()
 
-        if str(message.channel.id) in conf:    
-            time_diff = (datetime.datetime.utcnow() - epoch).total_seconds() - conf[str(message.channel.id)]
-            if time_diff >= 600:
+        if str(message.channel.id) in channels:    
+            time_diff = (datetime.datetime.utcnow() - epoch).total_seconds() - channels[str(message.channel.id)]
+            if time_diff >= cooldown:
                 terms = yaml.load(open(self.terms_path))
                 reactions = yaml.load(open(self.listofbreens))
                 s = message.content.translate(str.maketrans('','',"!?.,'123456789"))
@@ -84,8 +98,8 @@ class BreenReacts(BaseCog):
                     for i in v:
                         if i in s.lower():
                             index = randint(0, (len(reactions[k])-1))
-                            conf[str(message.channel.id)] = (datetime.datetime.utcnow() - epoch).total_seconds()
-                            await self.config.channels.set(conf)
+                            channels[str(message.channel.id)] = (datetime.datetime.utcnow() - epoch).total_seconds()
+                            await self.config.channels.set(channels)
                             await message.channel.send(reactions[k][index])
                             return
                 
