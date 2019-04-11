@@ -11,7 +11,7 @@ import discord
 from redbot.core import commands, checks, Config, utils
 from redbot.core.data_manager import bundled_data_path, cog_data_path
 
-__version__ = "0.0.1"
+__version__ = "1.0.0"
 __author__ = "Crossedfall"
 
 epoch = datetime.datetime.utcfromtimestamp(0)
