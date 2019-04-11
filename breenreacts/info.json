@@ -1,0 +1,19 @@
+{
+    "author": [
+        "Crossedfall (Crossedfall#1001)"
+    ],
+    "install_msg": "Praise be to our lord Neil Breen. New channels can only be added into the collective by you the owner. Use [p]breenify to add a new channel to the cult of Breen.",
+    "name": "BreenReacts",
+    "short": "You know what to do",
+    "description": "Reacts to messages that contain one of the terms found in the included 'data' folder with Breen gifs",
+    "permissions": [
+        "Manage Messages",
+        "Embed Links"
+    ],
+    "tags": [
+        "Misc",
+        "Utility",
+        "Neil Breen",
+        "User cogs"
+    ]
+}
