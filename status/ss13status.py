@@ -93,7 +93,7 @@ class SS13Status(BaseCog):
 
     @setstatus.command()
     @checks.is_owner()
-    async def offline(self, ctx, msg: str):
+    async def offline(self, ctx, *, msg: str):
         """
         Set a custom message for whenever the server is offline.
         """ 
