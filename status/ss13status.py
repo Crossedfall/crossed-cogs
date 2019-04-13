@@ -304,10 +304,13 @@ class SS13Status(BaseCog):
             embed=discord.Embed(color=0x26eaea)
             embed.add_field(name="Map", value=str.title(*data['map_name']), inline=True)
             embed.add_field(name="Security Level", value=str.title(*data['security_level']), inline=True)
-            if ("docked" or "call") not in data['shuttle_mode']:
-                embed.add_field(name="Shuttle Status", value=str.title(*data['shuttle_mode']), inline=True)
+            if  "shuttle_mode" in data:
+                if ("docked" or "call") not in data['shuttle_mode']:
+                    embed.add_field(name="Shuttle Status", value=str.title(*data['shuttle_mode']), inline=True)
+                else:
+                    embed.add_field(name="Shuttle Timer", value=time.strftime('%M:%S', time.gmtime(int(*data['shuttle_timer']))), inline=True)
             else:
-                embed.add_field(name="Shuttle Timer", value=time.strftime('%M:%S', time.gmtime(int(*data['shuttle_timer']))), inline=True)
+                embed.add_field(name="Shuttle Status", value="Refueling", inline=True)
             embed.add_field(name="Players", value=players, inline=True)
             embed.add_field(name="Admins", value=int(*data['admins']), inline=True)
             embed.add_field(name="Round Duration", value=duration, inline=True)
