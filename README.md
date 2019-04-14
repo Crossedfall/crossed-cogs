@@ -131,7 +131,7 @@ SSredbot.send_discord_message("admin","The supermatter has just delaminated.","r
 
 
 
-#### Important Notes:
+##### Important Notes:
 
 - The bot will automatically provide an `@here` mention in the designated admin channel, which can be adjusted with the `[p]setstatus adminchannel` command (_where [p] is your prefix_). It is recommend to create an admin monitoring channel where the bot has permissions to mention and post updates.
 
