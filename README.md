@@ -29,11 +29,11 @@ _Any reference to [p] should be replaced with your prefix_
 
 In order to fully utilize the GetNotes cog you will need to have a fully configured player database for your SS13 server configured using the [/TG/ schema](https://github.com/tgstation/tgstation/blob/master/SQL/tgstation_schema.sql). 
 
-Once you have a database configured, you will need to provide a user that the bot can use to query said database. It is **highly** recommended that you ensure this user only has read privileges and is separate from the one your server is configured to use. 
+Once you have a database configured, you will need to provide a user that the bot can use to query said database. It is **highly** recommended that you ensure this user only has `SELECT` privileges and is separate from the one your server is configured to use. 
 
 --
 
-_Note:_ While the required `mysql-connector` package should be installed automatically.. If you get an error when using the notes cog where the `mysql-connector` module wasn't found, please ensure it is installed either by using your favorite terminal or (with the debug flag enabled on your bot) `[p]pipinstall mysql-connector` where `[p]` is your prefix.  
+_Note:_ While the required `mysql-connector-python` package should be installed automatically.. If you get an error when using the notes cog where the `mysql-connector-python` module wasn't found, please ensure it is installed either by using your favorite terminal or (with the debug flag enabled on your bot) `[p]pipinstall mysql-connector-python` where `[p]` is your prefix.  
 
 ---
 
@@ -45,11 +45,7 @@ The status cog operates by probing the server with a `?status` request and then 
 | :-----------------------------------------------: | :-----------------------------------------------: |
 | ![1543959022724](https://i.imgur.com/7K1x9nd.png) | ![1544039500509](https://i.imgur.com/EXe4p1T.png) |
 
-
-
 In addition to the above, the status cog also has a listening function to serve incoming game data provided by your SS13 server. Currently, this cog serves new round and administrative notices using the following subsystem. In order for the status cog to receive said notifications, this controller subsystem will need to be added into your codebase and loaded into your dme file. (`code/controllers/subsystem/redbot.dm`)
-
-
 
 ```dm
 SUBSYSTEM_DEF(redbot)
@@ -62,6 +58,7 @@ SUBSYSTEM_DEF(redbot)
 	if(config && bot_ip)
 		var/query = "http://[bot_ip]/?serverStart=1&key=[comms_key]"
 		world.Export(query)
+	return ..()
 
 /datum/controller/subsystem/redbot/proc/send_discord_message(var/channel, var/message, var/priority_type)
 	var/bot_ip = CONFIG_GET(string/bot_ip)
@@ -139,9 +136,37 @@ SSredbot.send_discord_message("admin","The supermatter has just delaminated.","r
 - The bot will automatically provide an `@here` mention in the designated admin channel, which can be adjusted with the `[p]setstatus adminchannel` command (_where [p] is your prefix_). It is recommend to create an admin monitoring channel where the bot has permissions to mention and post updates.
 
 
-
-
 - In order to serve messages received by your game server, you will need to ensure that the `comms_key` for the bot and the server are the same. The bot will automatically drop any messages sent that do not contain your `comms_key`. This setting can be found within your [config file](https://github.com/tgstation/tgstation/blob/master/config/comms.txt#L2)
+
+#### Additional Functions:
+
+The `[p]players` and `[p]adminwho` commands will output a list of player/admin ckeys respectively. In order to use these functions you will need to add the below entries at the bottom of your [world_topic.dm](https://github.com/tgstation/tgstation/blob/master/code/datums/world_topic.dm) file. Using the commands without the below topics will cause the bot to report "0 players" whenever either command is used. This will not effect the player/admin counts in the status report, however.
+
+```dm
+/datum/world_topic/whois
+	keyword = "whoIs"
+
+/datum/world_topic/whois/Run(list/input)
+	/var/list/s = list()
+	s["players"] = GLOB.clients
+
+	return list2params(s)
+
+/datum/world_topic/getadmins
+	keyword = "getAdmins"
+
+/datum/world_topic/getadmins/Run(list/input)
+	var/list/s = list()
+	var/list/adm = get_admin_counts()
+	var/list/presentmins = adm["present"]
+	var/list/afkmins = adm["afk"]
+	s["admins"] = presentmins
+	s["admins"] += afkmins
+
+	return list2params(s)	
+```
+
+
 
 ---
 
