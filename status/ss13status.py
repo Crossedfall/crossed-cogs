@@ -7,6 +7,7 @@ import socket
 import urllib.parse
 import html.parser as htmlparser
 import time
+import textwrap
 
 #Discord Imports
 import discord
@@ -298,11 +299,14 @@ class SS13Status(BaseCog):
             duration = time.strftime('%H:%M', time.gmtime(duration))
             #Players also includes the number of admins, so we need to do some quick math
             players = (int(*data['players']) - int(*data['admins'])) 
+            #Format long map names
+            mapname = str.title(*data['map_name'])
+            mapname = '\n'.join(textwrap.wrap(mapname,25))
 
             #Might make the embed configurable at a later date
 
             embed=discord.Embed(color=0x26eaea)
-            embed.add_field(name="Map", value=str.title(*data['map_name']), inline=True)
+            embed.add_field(name="Map", value=mapname, inline=True)
             embed.add_field(name="Security Level", value=str.title(*data['security_level']), inline=True)
             if  "shuttle_mode" in data:
                 if ("docked" or "call") not in data['shuttle_mode']:
