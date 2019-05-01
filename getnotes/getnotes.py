@@ -232,7 +232,7 @@ class GetNotes(BaseCog):
         
 
     @checks.mod_or_permissions(administrator=True)
-    @commands.command(aliases=["searchplayer"])
+    @commands.command()
     async def findplayer(self, ctx, *,player: str):
         """
         Obtains information about a specific player.
