@@ -152,6 +152,137 @@ class GetNotes(BaseCog):
             await message.edit(content="`mysql-connector` requirement not found! Please install this requirement using `pip install mysql-connector`.")
 
 
+    def player_search_type(self, search, search_type) -> bool:
+        """
+        Determines if the search is for an IP, CKEY, or CID.
+        """
+        if search_type is 'ip':
+            try:
+                ipaddress.IPv4Address(search) #IPv6 isn't supported, so lets just rule that out now.
+                return True
+            except ValueError:
+                return False
+        elif search_type is 'cid':
+            try:
+                int(search)
+                return True
+            except ValueError:
+                return False
+        elif search_type is 'ckey':
+            try:
+                str(search)
+                return True
+            except ValueError:
+                return False
+        else:
+            return False
+    
+    async def player_search(self, ctx, ip = None, ckey = None, cid = None) -> dict:
+        """
+        Runs multiple database queries to obtain the player's information
+        """
+        try:
+            # First query is determined by the identifier given 
+            if ip:
+                #IPs are stored as a 32 bit integer in the databse. We need to convert it before doing the query.
+                query = f"SELECT ckey, firstseen, lastseen, computerid, ip, accountjoindate FROM player WHERE ip='{int(ipaddress.IPv4Address(ip))}'"
+                query = await self.query_database(ctx, query)
+            elif ckey:
+                query = f"SELECT ckey, firstseen, lastseen, computerid, ip, accountjoindate FROM player WHERE ckey='{ckey}'"
+                query = await self.query_database(ctx, query)
+            elif cid:
+                query = f"SELECT ckey, firstseen, lastseen, computerid, ip, accountjoindate FROM player WHERE computerid='{cid}'"
+                query = await self.query_database(ctx, query)
+
+            results = {}
+            try:
+                query = query[0] # Checks to see if a player was found, if the list is empty nothing was found so we return the empty dict.
+            except IndexError:
+                return results
+            results['ip'] = ipaddress.IPv4Address(query['ip']) #IP's are stored as a 32 bit integer, converting it for readability
+            results['cid'] = query['computerid']
+            results['ckey'] = query['ckey']
+            results['first'] = query['firstseen']
+            results['last'] = query['lastseen']
+            results['join'] = query['accountjoindate']
+
+            #Obtain the number of total connections
+            query = f"SELECT COUNT(*) FROM connection_log WHERE ckey='{results['ckey']}'"
+            query = await self.query_database(ctx, query)
+            results['num_connections'] = query[0]['COUNT(*)']
+
+            #Obtain the number of bans and, if applicable, the last ban
+            query = f"SELECT bantime FROM ban WHERE ckey='{results['ckey']}' ORDER BY bantime DESC"
+            query = await self.query_database(ctx, query)
+            results['num_bans'] = len(query)
+            if results['num_bans'] > 0:
+                results['latest_ban'] = list(query[0].values())[0]
+            else:
+                results['latest_ban'] = None
+
+            #Obtain the total number of notes
+            query = f"SELECT COUNT(*) FROM messages WHERE targetckey='{results['ckey']}'"
+            query = await self.query_database(ctx, query)
+            results['notes'] = query[0]['COUNT(*)']
+
+            return results
+
+        except:
+            raise
+        
+
+    @checks.mod_or_permissions(administrator=True)
+    @commands.command(aliases=["searchplayer"])
+    async def findplayer(self, ctx, *,player: str):
+        """
+        Obtains information about a specific player.
+
+        Will search for players using a provided IP, CID, or CKEY. 
+        """
+
+        try:
+            message = await ctx.send("Looking up player....")
+            async with ctx.typing():
+                if self.player_search_type(player, 'ip') is True:
+                    player = await self.player_search(ctx, ip=player)
+                elif self.player_search_type(player, 'cid') is True:
+                    player = await self.player_search(ctx, cid=player)
+                elif self.player_search_type(player, 'ckey') is True:
+                    player = await self.player_search(ctx, ckey=player)
+                else:
+                    await message.edit(f"Unable to determine what you're searching for. Please check your entry and try again!")
+                    return
+
+            if player:
+                embed=discord.Embed(color=await ctx.embed_color())
+
+                embed.add_field(name="__Identity:__",value=f"**CKEY**: {player['ckey']}\n**CID**: {player['cid']}\n**IP**: {player['ip']}\n**Account Join Date**: {player['join']}", inline=False)                    
+                embed.add_field(name="__Connection Information:__", value=f"**First Seen**: {player['first']}\n**Last Seen**: {player['last']}\n**Number of connections**: {player['num_connections']}", inline=False)
+                embed.add_field(name="__Bans/Notes:__", value=f"**Number of notes**: {player['notes']}\n**Number of Bans**: {player['num_bans']}\n**Last Ban**: {player['latest_ban']}", inline=False)
+
+                await message.edit(content=None, embed=embed)
+
+                # After 5-minutes redact the player's CID and IP.
+                await asyncio.sleep(300)
+                embed.clear_fields()
+                embed.add_field(name="__Identity:__",value=f"**CKEY**: {player['ckey']}\n**CID**: `[Redacted]`\n**IP**: `[Redacted]`\n**Account Join Date**: {player['join']}", inline=False)                    
+                embed.add_field(name="__Connection Information:__", value=f"**First Seen**: {player['first']}\n**Last Seen**: {player['last']}\n**Number of connections**: {player['num_connections']}", inline=False)
+                embed.add_field(name="__Bans/Notes:__", value=f"**Number of notes**: {player['notes']}\n**Number of Bans**: {player['num_bans']}\n**Last Ban**: {player['latest_ban']}", inline=False)
+
+                await message.edit(content=None, embed=embed)
+            else:
+                await message.edit(content="No results found.")
+
+        except mysql.connector.Error as err:
+            embed=discord.Embed(title=f"Error looking up player", description=f"{format(err)}", color=0xff0000)
+            await message.edit(content=None,embed=embed)
+            return
+        
+        except ModuleNotFoundError:
+            await message.edit(content="`mysql-connector` requirement not found! Please install this requirement using `pip install mysql-connector`.")
+            return          
+        
+
     async def query_database(self, ctx, query: str):
         # Database options loaded from the config
         db = await self.config.guild(ctx.guild).mysql_db()
