@@ -2,6 +2,7 @@
 import asyncio
 import mysql.connector
 import ipaddress
+from typing import Union
 
 #Discord Imports
 import discord
@@ -150,32 +151,6 @@ class GetNotes(BaseCog):
         
         except ModuleNotFoundError:
             await message.edit(content="`mysql-connector` requirement not found! Please install this requirement using `pip install mysql-connector`.")
-
-
-    def player_search_type(self, search, search_type) -> bool:
-        """
-        Determines if the search is for an IP, CKEY, or CID.
-        """
-        if search_type is 'ip':
-            try:
-                ipaddress.IPv4Address(search) #IPv6 isn't supported, so lets just rule that out now.
-                return True
-            except ValueError:
-                return False
-        elif search_type is 'cid':
-            try:
-                int(search)
-                return True
-            except ValueError:
-                return False
-        elif search_type is 'ckey':
-            try:
-                str(search)
-                return True
-            except ValueError:
-                return False
-        else:
-            return False
     
     async def player_search(self, ctx, ip = None, ckey = None, cid = None) -> dict:
         """
@@ -233,7 +208,7 @@ class GetNotes(BaseCog):
 
     @checks.mod_or_permissions(administrator=True)
     @commands.command()
-    async def findplayer(self, ctx, *,player: str):
+    async def findplayer(self, ctx, *,player: Union[ipaddress.IPv4Address, int, str] = None):
         """
         Obtains information about a specific player.
 
@@ -243,14 +218,15 @@ class GetNotes(BaseCog):
         try:
             message = await ctx.send("Looking up player....")
             async with ctx.typing():
-                if self.player_search_type(player, 'ip') is True:
+
+                if type(player) is ipaddress.IPv4Address:
                     player = await self.player_search(ctx, ip=player)
-                elif self.player_search_type(player, 'cid') is True:
+                elif type(player) is int:
                     player = await self.player_search(ctx, cid=player)
-                elif self.player_search_type(player, 'ckey') is True:
+                elif type(player) is str:
                     player = await self.player_search(ctx, ckey=player)
                 else:
-                    await message.edit(f"Unable to determine what you're searching for. Please check your entry and try again!")
+                    await message.edit(content="That doesn't look like an IP, CID, or CKEY. Please check your entry and try again!")
                     return
 
             if player:
