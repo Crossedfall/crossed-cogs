@@ -71,11 +71,10 @@ class SS13Status(BaseCog):
         Sets the server IP used for status checks, defaults to localhost
         """
         try:
-            ipaddress.ip_address(host) # Confirms that the IP provided is valid. If the IP is not valid, a ValueError is thrown.
             await self.config.server.set(host)
-            await ctx.send(f"Server set to `{host}`")
-        except(ValueError):
-            await ctx.send(f"`{host}` is not a valid IP address!")
+            await ctx.send(f"Server set to: `{host}`")
+        except (ValueError, KeyError, AttributeError):
+            await ctx.send("There was an error setting the host! Please check your entry and try again.")
     
     @setstatus.command()
     @checks.is_owner()
@@ -235,7 +234,7 @@ class SS13Status(BaseCog):
         """
         Lists the current players on the server
         """
-        server = await self.config.server()
+        server = socket.gethostbyname(await self.config.server())
         port = await self.config.game_port()
         data = await self.query_server(server,port,"?whoIs")
 
@@ -257,7 +256,7 @@ class SS13Status(BaseCog):
         """
         List the current admins on the server
         """
-        server = await self.config.server()
+        server = socket.gethostbyname(await self.config.server())
         port = await self.config.game_port()
         data = await self.query_server(server,port,"?getAdmins")
 
@@ -282,7 +281,7 @@ class SS13Status(BaseCog):
         """
         Gets the current server status and round details
         """
-        server = await self.config.server()
+        server = socket.gethostbyname(await self.config.server())
         port = await self.config.game_port()        
         msg = await self.config.offline_message()
         server_url = await self.config.server_url()
