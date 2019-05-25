@@ -1,6 +1,7 @@
 #Standard Imports
 import asyncio
 import mysql.connector
+import socket
 import ipaddress
 from typing import Union
 
@@ -47,11 +48,10 @@ class GetNotes(BaseCog):
         Sets the MySQL host, defaults to localhost (127.0.0.1)
         """
         try:
-            ipaddress.ip_address(db_host) # Confirms that the IP provided is valid. If the IP is not valid, a ValueError is thrown.
             await self.config.guild(ctx.guild).mysql_host.set(db_host)
             await ctx.send(f"Database host set to: {db_host}")
-        except(ValueError):
-            await ctx.send(f"{db_host} is not a valid ip address!")
+        except (ValueError, KeyError, AttributeError):
+            await ctx.send("There was an error setting the database's ip/hostname. Please check your entry and try again!")
     
     @setnotes.command()
     @checks.is_owner()
@@ -262,7 +262,7 @@ class GetNotes(BaseCog):
     async def query_database(self, ctx, query: str):
         # Database options loaded from the config
         db = await self.config.guild(ctx.guild).mysql_db()
-        db_host = await self.config.guild(ctx.guild).mysql_host()
+        db_host = socket.gethostbyname(await self.config.guild(ctx.guild).mysql_host())
         db_port = await self.config.guild(ctx.guild).mysql_port()
         db_user = await self.config.guild(ctx.guild).mysql_user()
         db_pass = await self.config.guild(ctx.guild).mysql_password()
