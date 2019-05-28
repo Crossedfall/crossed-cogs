@@ -15,7 +15,7 @@ import discord
 #Redbot Imports
 from redbot.core import commands, checks, Config, utils
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __author__ = "Crossedfall"
 
 BaseCog = getattr(commands, "Cog", object)
@@ -27,6 +27,7 @@ class SS13Status(BaseCog):
         self.antispam = 0 #Used to prevent @here mention spam
         self.statusmsg = None #Used to delete the status message
         self.newroundmsg = None #Used to delete the new round notification
+        self.roundID = None
 
         self.bot = bot
         self.config = Config.get_conf(self, 3257193194, force_registration=True)
@@ -391,7 +392,8 @@ class SS13Status(BaseCog):
         ##################
         admin_channel = self.bot.get_channel(await self.config.admin_notice_channel())
         new_round_channel = self.bot.get_channel(await self.config.new_round_channel())
-        mention_role = discord.utils.get(admin_channel.guild.roles, id=(await self.config.mention_role()))
+        if admin_channel is not None:
+            mention_role = discord.utils.get(admin_channel.guild.roles, id=(await self.config.mention_role()))
         comms_key = await self.config.comms_key()
         byondurl = await self.config.server_url()
         parser = htmlparser.HTMLParser()
@@ -399,6 +401,10 @@ class SS13Status(BaseCog):
         if ('key' in parsed_data) and (comms_key in parsed_data['key']): #Check to ensure that we're only serving messages from our game
             if ('serverStart' in parsed_data) and (new_round_channel is not None):
                 embed = discord.Embed(title="Starting new round!", description=byondurl, color=0x8080ff)
+
+                if ('roundID' in parsed_data):
+                    self.roundID = parsed_data['roundID'][0]
+                    embed.set_footer(text=f"Round: {self.roundID}")
 
                 try:
                     await self.newroundmsg.delete()
@@ -437,6 +443,8 @@ class SS13Status(BaseCog):
                     ticket = announce.split('): ')
                     ticket[1] = parser.unescape(ticket[1])
                     embed = discord.Embed(title=f"{ticket[0]}):", description=ticket[1],color=0xff0000)
+                    if self.roundID is not None:
+                        embed.set_footer(text=f"Round: {self.roundID}")
                     await admin_channel.send(embed=embed)
 
                 elif "@here" in announce and self.antispam == 0: #Ping any online admins once every 5 minutes
@@ -459,6 +467,8 @@ class SS13Status(BaseCog):
                 
                 elif "@here" not in announce: 
                     embed = discord.Embed(title=announce, color=0xf95100)
+                    if self.roundID is not None:
+                        embed.set_footer(text=f"Round: {self.roundID}")
                     await admin_channel.send(embed=embed)
 
                 else: #If it's not one of the above, it's not worth serving
