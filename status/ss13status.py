@@ -15,7 +15,7 @@ import discord
 #Redbot Imports
 from redbot.core import commands, checks, Config, utils
 
-__version__ = "0.9.3"
+__version__ = "1.0.0"
 __author__ = "Crossedfall"
 
 BaseCog = getattr(commands, "Cog", object)
