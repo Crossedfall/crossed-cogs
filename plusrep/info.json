@@ -1,0 +1,21 @@
+{
+    "author": [
+        "Crossedfall (Crossedfall#1001)"
+    ],
+    "install_msg": "While functional, this cog is currently still in development. Please report issues here: https://github.com/crossedfall/crossed-cogs/issues.",
+    "name": "PlusRep+",
+    "short": "Give updoots to your favorite memes",
+    "description": "Reacts to messages in a designated channel that allows users to show if they liked it or not. Votes are tallied and added to a leaderboard",
+    "permissions": [
+        "Manage Messages",
+        "Embed Links",
+        "Add Reactions"
+    ],
+    "tags": [
+        "Misc",
+        "Utility",
+        "Rep",
+        "Memes",
+        "User cogs"
+    ]
+}
