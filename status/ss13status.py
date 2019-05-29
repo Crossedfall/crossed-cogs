@@ -119,40 +119,57 @@ class SS13Status(BaseCog):
     
     @setstatus.command()
     @checks.is_owner()
-    async def newroundchannel(self, ctx, text_channel: discord.TextChannel):
+    async def newroundchannel(self, ctx, text_channel: discord.TextChannel = None):
         """
-        Set the text channel to display new round notifications
+        Set the text channel to display new round notifications. 
+        
+        Use without providing a channel to reset this to None.
         """
         try: 
-            await self.config.new_round_channel.set(text_channel.id)
-            await ctx.send(f"New round notifications will be sent to: {text_channel.mention}")
+            if text_channel is not None:
+                await self.config.new_round_channel.set(text_channel.id)
+                await ctx.send(f"New round notifications will be sent to: {text_channel.mention}")
+            else:
+                await self.config.new_round_channel.set(None)
+                await ctx.send("I will no longer send new round notifications.")
 
         except(ValueError, KeyError, AttributeError):
             await ctx.send("There was a problem setting the notification channel. Please check your entry and try again.")
 
     @setstatus.command()
     @checks.is_owner()
-    async def adminchannel(self, ctx, text_channel: discord.TextChannel):
+    async def adminchannel(self, ctx, text_channel: discord.TextChannel = None):
         """
-        Set the text channel to display admin notifications
+        Set the text channel to display admin notifications.
+        
+        Use without providing a channel to reset this to None.
         """
         try:
-            await self.config.admin_notice_channel.set(text_channel.id)
-            await ctx.send(f"Admin notifications will be sent to: {text_channel.mention}")
+            if text_channel is not None:
+                await self.config.admin_notice_channel.set(text_channel.id)
+                await ctx.send(f"Admin notifications will be sent to: {text_channel.mention}")
+            else:
+                await self.config.admin_notice_channel.set(None)
+                await ctx.send("I will no longer provide admin notices.")
 
         except(ValueError, KeyError, AttributeError):
             await ctx.send("There was a problem setting the notification channel. Please check your entry and try again.")
 
     @setstatus.command()
     @checks.is_owner()
-    async def mentionrole(self, ctx, role: discord.Role):
+    async def mentionrole(self, ctx, role: discord.Role = None):
         """
-        Sets a role to mention in new round notifications
+        Sets a role to mention in new round notifications. 
+        
+        Use without providing a role to reset to None.
         """
         try:
-         await self.config.mention_role.set(role.id)
-         await ctx.send(f"New round notifications will now mention the `{role.name}` role.")
-
+            if role is not None:
+                await self.config.mention_role.set(role.id)
+                await ctx.send(f"New round notifications will now mention the `{role.name}` role.")
+            else:
+                await self.config.mention_role.set(None)
+                await ctx.send("I will no longer mention anyone whenever a new round starts.")
         except(ValueError, KeyError, AttributeError):
             await ctx.send("There was a problem setting the mention role. Please check your entry and try again.")
 
@@ -437,7 +454,7 @@ class SS13Status(BaseCog):
                     else:
                         self.newroundmsg = await new_round_channel.send(embed=embed)
 
-            elif ('announce_channel' in parsed_data) and ('admin' in parsed_data['announce_channel']): #Secret messages only meant for admin eyes
+            elif ('announce_channel' in parsed_data) and ('admin' in parsed_data['announce_channel']) and (admin_channel is not None): #Secret messages only meant for admin eyes
                 announce = str(*parsed_data['announce'])
                 if "Ticket" in announce:
                     ticket = announce.split('): ')
