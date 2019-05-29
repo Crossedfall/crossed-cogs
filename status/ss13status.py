@@ -48,7 +48,7 @@ class SS13Status(BaseCog):
         self.config.register_global(**default_global)
         self.serv = bot.loop.create_task(self.listener())
     
-    def __unload(self):
+    def cog_unload(self):
         self.serv.cancel()
 
     async def changed_port(self, ctx, port: int):
