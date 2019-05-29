@@ -75,6 +75,7 @@ class BreenReacts(BaseCog):
         except(TypeError, KeyError, AttributeError):
             await ctx.send("There was a problem setting the cooldown. Please check your entry and try again.")
     
+    @commands.Cog.listener()
     async def on_message(self, message):
         if message.author == self.bot.user:
             return
