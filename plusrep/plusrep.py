@@ -10,7 +10,7 @@ from redbot.core import commands, checks, Config, utils
 from redbot.core.utils.chat_formatting import box, pagify
 from redbot.core.utils.menus import menu, DEFAULT_CONTROLS
 
-__version__ = "0.0.5" #Working but needs optimization and actual features
+__version__ = "0.1.0" #Working but needs optimization and actual features
 __author__ = "Crossedfall"
 
 
@@ -159,7 +159,7 @@ class PlusRep(BaseCog):
                                 else:
                                     rep[f'{message.author.id}'] = 0
                                 if message.author in reaction_users:
-                                    rep[f'{message.author.id}'] -= 1
+                                    rep[f'{message.author.id}'] += 1
             except:
                 continue
 
