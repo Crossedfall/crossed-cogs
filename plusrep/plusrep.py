@@ -276,6 +276,8 @@ class PlusRep(BaseCog):
         elif self.downvote == str(payload.emoji):
             rep = await self.config.guild(message.guild).reputation()
             if f'{member.id}' in rep.keys():
+                if rep[f'{member.id}'] <= 0:
+                    return
                 rep[f'{member.id}'] += 1
             else:
                 return
