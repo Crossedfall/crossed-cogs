@@ -206,11 +206,12 @@ class PlusRep(BaseCog):
         #### Thanks Trusty for the above https://github.com/TrustyJAID/Trusty-cogs/blob/master/starboard/starboard.py#L756 ####
         valid = True
         for reaction in message.reactions:
-            reaction_users = await reaction.users().flatten()
-            if self.bot.user not in reaction_users:
-                valid = False
-            else:
-                valid = True
+            if self.upvote == str(reaction.emoji) or self.downvote == str(reaction.emoji):
+                reaction_users = await reaction.users().flatten()
+                if self.bot.user not in reaction_users:
+                    valid = False
+                else:
+                    valid = True
         if valid is False:
             return
 
@@ -257,11 +258,12 @@ class PlusRep(BaseCog):
         #### Thanks Trusty for the above ####
         valid = True
         for reaction in message.reactions:
-            reaction_users = await reaction.users().flatten()
-            if self.bot.user not in reaction_users:
-                valid = False
-            else:
-                valid = True
+            if self.upvote == str(reaction.emoji) or self.downvote == str(reaction.emoji):
+                reaction_users = await reaction.users().flatten()
+                if self.bot.user not in reaction_users:
+                    valid = False
+                else:
+                    valid = True
         if valid is False:
             return
 
