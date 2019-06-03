@@ -212,7 +212,7 @@ class PlusRep(BaseCog):
         elif rep < threshold:
             return
         else:
-            if role in user.roles:
+            if role not in user.roles:
                 await user.add_roles(role, reason="Reputation threshold reached")
                 await channel.send(f"Congrats {user.mention}! You've just earned the `{role.name}` role based on your current reputation!")        
 
