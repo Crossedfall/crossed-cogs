@@ -28,7 +28,8 @@ class PlusRep(BaseCog):
             "reputation": {},
             "reaction_channels": {},
             "threshold": 0,
-            "role": None
+            "role": None,
+            "leaderboard_name": None
         }
 
         self.config.register_guild(**default_guild)
@@ -109,12 +110,27 @@ class PlusRep(BaseCog):
         await self.config.guild(ctx.guild).threshold.set(threshold)
         await ctx.send(f"OK! I will grant the `{role.name}` role whenever a user gains {threshold} reputation.")
 
+    @commands.admin_or_permissions(administrator=True)
+    @plusrep.command()
+    async def leaderboardname(self, ctx, *,name: str):
+        """
+        Sets the name of the guild's reputation leaderboard. Names are limited to a max of 70 characters.
+        """
+        if len(name) > 70:
+            await ctx.send("Your name is too long, please provide a name that's at most 70 characters.")
+            return
+        
+        await self.config.guild(ctx.guild).leaderboard_name.set(name)
+        await ctx.send(f"Your leaderboard has been renamed to `{name}`.")
+        
+
     @plusrep.command()
     async def leaderboard(self, ctx):
         """
         Guild reputation leaderboard
         """
         rep = await self.config.guild(ctx.guild).reputation()
+        lname = await self.config.guild(ctx.guild).leaderboard_name()
         message = await ctx.send("Populating leaderboard....")
         if not rep:
             await message.edit(content="Nobody has any reputation!")
@@ -139,7 +155,7 @@ class PlusRep(BaseCog):
                     color=await ctx.embed_color(), description=(box(page, lang="md"))
                 )
                 page_list.append(embed)
-            await message.edit(content=box(f"[Rep Leaderboard]", lang="ini"))
+            await message.edit(content=box(f"[{lname}]", lang="ini"))
             await menu(ctx, page_list, DEFAULT_CONTROLS)
             ### Thank you Aik for the above https://github.com/aikaterna/aikaterna-cogs/blob/v3/trickortreat/trickortreat.py#L187 ###
 
@@ -160,7 +176,7 @@ class PlusRep(BaseCog):
         """
         rep = {}
         channels = (await self.config.guild(ctx.guild).reaction_channels()).keys()
-        msg = await ctx.send("Getting rep. This may take a while if the channel is very large...")
+        msg = await ctx.send("Getting rep. This may take a while if the channels are very large...")
         for channel in channels:
             try:
                 channel = self.bot.get_channel(int(channel))
