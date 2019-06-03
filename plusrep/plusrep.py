@@ -7,10 +7,11 @@ import discord
 
 #Redbot Imports
 from redbot.core import commands, checks, Config, utils
+from redbot.core.utils.predicates import MessagePredicate
 from redbot.core.utils.chat_formatting import box, pagify
 from redbot.core.utils.menus import menu, DEFAULT_CONTROLS
 
-__version__ = "0.1.0" #Working but needs optimization and actual features
+__version__ = "0.1.1" #Working but needs optimization and actual features
 __author__ = "Crossedfall"
 
 
@@ -25,7 +26,9 @@ class PlusRep(BaseCog):
 
         default_guild = {
             "reputation": {},
-            "reaction_channels": {}
+            "reaction_channels": {},
+            "threshold": 0,
+            "role": None
         }
 
         self.config.register_guild(**default_guild)
@@ -80,6 +83,31 @@ class PlusRep(BaseCog):
         else:
             await ctx.send(msg)
 
+    @commands.admin_or_permissions(administrator=True)
+    @plusrep.command()
+    async def role(self, ctx, role: discord.Role = None, threshold: int = None):
+        """
+        Grant a role whenever a user gets enough reputation
+        """
+
+        if not role:
+            await ctx.send("I will no longer grant a role if a user gains enough reputation.")
+            await self.config.guild(ctx.guild).role.set(None)
+            await self.config.guild(ctx.guild).threshold.set(None)
+            return
+        
+        if not threshold:
+            await ctx.send("How much reputation should a user have before I grant them their role?")
+            pred = MessagePredicate.valid_int(ctx)
+            await self.bot.wait_for('message', check=pred)
+            await self.config.guild(ctx.guild).threshold.set(pred.result)
+            await ctx.send(f"Got it! I will grant the `{role.name}` role whenever a user gains {pred.result} reputation.")
+            return
+
+        await self.config.guild(ctx.guild).role.set(role.id)
+        await self.config.guild(ctx.guild).threshold.set(threshold)
+        await ctx.send(f"OK! I will grant the `{role.name}` role whenever a user gains {threshold} reputation.")
+
     @plusrep.command()
     async def leaderboard(self, ctx):
         """
@@ -122,7 +150,7 @@ class PlusRep(BaseCog):
         """
         await self.config.guild(ctx.guild).reputation.set({})
         await ctx.send("Cleared")
-    
+
     @commands.is_owner()
     @plusrep.command()
     async def tallyrep(self, ctx):
@@ -165,6 +193,25 @@ class PlusRep(BaseCog):
 
         await self.config.guild(ctx.guild).reputation.set(rep)
         await msg.edit(content="Rep updated!")                     
+
+    async def giverole(self, user: discord.Member, rep: int, channel: discord.channel):
+        """
+        Checks to see if a user has earned their role! Punishes those that hit zero rep
+        """
+        threshold = await self.config.guild(channel.guild).threshold()
+        if not threshold:
+            return
+        
+        role = channel.guild.get_role(await self.config.guild(channel.guild).role())
+
+        if rep <= 0:
+            await user.remove_roles(role, reason="Hit zero rep")
+            await channel.send(f"Wow. You managed to hit zero rep {user.mention}. Guess you wont be needing your `{role.name}` role anymore.")
+        elif rep < threshold:
+            return
+        else:
+            await user.add_roles(role, reason="Reputation threshold reached")
+            await channel.send(f"Congrats {user.mention}! You've just earned the `{role.name}` role based on your current reputation!")        
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -233,6 +280,7 @@ class PlusRep(BaseCog):
         else:
             return
         
+        await self.giverole(user=member, rep=rep[f'{member.id}'], channel=channel)
         await self.config.guild(message.guild).reputation.set(rep)
     
     @commands.Cog.listener()
@@ -284,4 +332,5 @@ class PlusRep(BaseCog):
         else:
             return
         
+        await self.giverole(user=member, rep=rep[f'{member.id}'], channel=channel)
         await self.config.guild(message.guild).reputation.set(rep)
