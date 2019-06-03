@@ -160,11 +160,11 @@ class PlusRep(BaseCog):
         """
         rep = {}
         channels = (await self.config.guild(ctx.guild).reaction_channels()).keys()
-        msg = await ctx.send("Getting rep. This may take a while...")
+        msg = await ctx.send("Getting rep. This may take a while if the channel is very large...")
         for channel in channels:
             try:
                 channel = self.bot.get_channel(int(channel))
-                async for message in channel.history():
+                async for message in channel.history(limit=2000):
                     if message.author.bot:
                         continue
                     if message.reactions:
@@ -193,7 +193,7 @@ class PlusRep(BaseCog):
                 continue
 
         await self.config.guild(ctx.guild).reputation.set(rep)
-        await msg.edit(content="Rep updated!")                     
+        await msg.edit(content=f"Hey {ctx.author.mention}, the rep updated!")                     
 
     async def giverole(self, user: discord.Member, rep: int, channel: discord.channel):
         """
