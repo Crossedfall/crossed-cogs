@@ -206,13 +206,15 @@ class PlusRep(BaseCog):
         role = channel.guild.get_role(await self.config.guild(channel.guild).role())
 
         if rep <= 0:
-            await user.remove_roles(role, reason="Hit zero rep")
-            await channel.send(f"Wow. You managed to hit zero rep {user.mention}. Guess you wont be needing your `{role.name}` role anymore.")
+            if role in user.roles:
+                await user.remove_roles(role, reason="Hit zero rep")
+                await channel.send(f"Wow. You managed to hit zero rep {user.mention}. Guess you wont be needing your `{role.name}` role anymore.")
         elif rep < threshold:
             return
         else:
-            await user.add_roles(role, reason="Reputation threshold reached")
-            await channel.send(f"Congrats {user.mention}! You've just earned the `{role.name}` role based on your current reputation!")        
+            if role in user.roles:
+                await user.add_roles(role, reason="Reputation threshold reached")
+                await channel.send(f"Congrats {user.mention}! You've just earned the `{role.name}` role based on your current reputation!")        
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
