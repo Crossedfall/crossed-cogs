@@ -9,7 +9,7 @@ import discord
 from redbot.core import commands, checks, Config, utils
 from redbot.core.utils.predicates import MessagePredicate
 from redbot.core.utils.chat_formatting import box, pagify
-from redbot.core.utils.menus import menu, DEFAULT_CONTROLS
+from redbot.core.utils.menus import menu, DEFAULT_CONTROLS, prev_page, next_page
 
 __version__ = "0.1.1" #Working but needs optimization and actual features
 __author__ = "Crossedfall"
@@ -74,10 +74,10 @@ class PlusRep(BaseCog):
         msg = "I am currently monitoring: "
 
         if channels:
-            for k in channels.keys():
-                channel = discord.utils.get(ctx.guild.channels, id=int(k))
-                if channel is not None:
-                    msg += f"{channel.mention} "
+            for channel in channels.keys():
+                channel_obj = ctx.guild.get_channel(channel)
+                if channel_obj is not None:
+                    msg += f"{channel_obj.mention} "
         
         if msg is "I am currently monitoring: ":
             await ctx.send("I'm not monitoring any channels!")
@@ -129,11 +129,20 @@ class PlusRep(BaseCog):
         """
         Guild reputation leaderboard
         """
+        header = await ctx.send("Populating leaderboard....")
+
+        async def close_menu(ctx: commands.Context, pages: list, controls: dict, message: discord.Message, page: int, timeout: float, emoji: str):
+            if message:
+                await message.delete()
+                await header.delete()
+                return None
+        
+        LEADERBOARD_CONTROLS = {"⬅": prev_page, "❌": close_menu, "➡": next_page}
+
         rep = await self.config.guild(ctx.guild).reputation()
         lname = await self.config.guild(ctx.guild).leaderboard_name()
-        message = await ctx.send("Populating leaderboard....")
         if not rep:
-            await message.edit(content="Nobody has any reputation!")
+            await header.edit(content="Nobody has any reputation!")
             return
         else:
             sorted_data = sorted(rep.items(), key=lambda x: x[1], reverse=True)
@@ -155,8 +164,8 @@ class PlusRep(BaseCog):
                     color=await ctx.embed_color(), description=(box(page, lang="md"))
                 )
                 page_list.append(embed)
-            await message.edit(content=box(f"[{lname}]", lang="ini"))
-            await menu(ctx, page_list, DEFAULT_CONTROLS)
+            await header.edit(content=box(f"[{lname}]", lang="ini"))
+            await menu(ctx, page_list, LEADERBOARD_CONTROLS)
             ### Thank you Aik for the above https://github.com/aikaterna/aikaterna-cogs/blob/v3/trickortreat/trickortreat.py#L187 ###
 
     @commands.is_owner()
