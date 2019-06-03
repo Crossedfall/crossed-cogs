@@ -101,6 +101,7 @@ class PlusRep(BaseCog):
             pred = MessagePredicate.valid_int(ctx)
             await self.bot.wait_for('message', check=pred)
             await self.config.guild(ctx.guild).threshold.set(pred.result)
+            await self.config.guild(ctx.guild).role.set(role)
             await ctx.send(f"Got it! I will grant the `{role.name}` role whenever a user gains {pred.result} reputation.")
             return
 
@@ -280,9 +281,9 @@ class PlusRep(BaseCog):
         else:
             return
         
-        await self.giverole(user=member, rep=rep[f'{member.id}'], channel=channel)
         await self.config.guild(message.guild).reputation.set(rep)
-    
+        await self.giverole(user=member, rep=rep[f'{member.id}'], channel=channel)
+
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload):
         channel = self.bot.get_channel(id=payload.channel_id)
@@ -332,5 +333,5 @@ class PlusRep(BaseCog):
         else:
             return
         
-        await self.giverole(user=member, rep=rep[f'{member.id}'], channel=channel)
         await self.config.guild(message.guild).reputation.set(rep)
+        await self.giverole(user=member, rep=rep[f'{member.id}'], channel=channel)
