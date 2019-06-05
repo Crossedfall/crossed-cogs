@@ -1,6 +1,8 @@
 #Standard Imports
 import asyncio
 import re
+import yaml
+from random import randint
 
 #Discord Imports
 import discord
@@ -10,6 +12,7 @@ from redbot.core import commands, checks, Config, utils
 from redbot.core.utils.predicates import MessagePredicate
 from redbot.core.utils.chat_formatting import box, pagify
 from redbot.core.utils.menus import menu, DEFAULT_CONTROLS, prev_page, next_page
+from redbot.core.data_manager import bundled_data_path, cog_data_path
 
 __version__ = "0.1.1" #Working but needs optimization and actual features
 __author__ = "Crossedfall"
@@ -21,6 +24,7 @@ class PlusRep(BaseCog):
     def __init__(self, bot):
         self.upvote = "👍"
         self.downvote = "👎"
+        self.selfvoters = {}
         self.bot = bot
         self.config = Config.get_conf(self, 3656823494, force_registration=True)
 
@@ -32,6 +36,7 @@ class PlusRep(BaseCog):
             "leaderboard_name": None
         }
 
+        self.callouts = str(bundled_data_path(self) / 'callouts.yml')
         self.config.register_guild(**default_guild)
 
 
@@ -274,30 +279,40 @@ class PlusRep(BaseCog):
         if f'{channel.id}' not in ((await self.config.guild(message.guild).reaction_channels()).keys()):
             return
         member = guild.get_member(message.author.id)
+        reactor = guild.get_member(payload.user_id)
         if message.author.bot:
             return
-        if message.author.id == payload.user_id:
-            return
         #### Thanks Trusty for the above https://github.com/TrustyJAID/Trusty-cogs/blob/master/starboard/starboard.py#L756 ####
-        valid = True
         for reaction in message.reactions:
             if self.upvote == str(reaction.emoji) or self.downvote == str(reaction.emoji):
                 reaction_users = await reaction.users().flatten()
                 if self.bot.user not in reaction_users:
-                    valid = False
-                else:
-                    valid = True
-        if valid is False:
-            return
+                    return
 
         if self.upvote == str(payload.emoji):
             rep = await self.config.guild(message.guild).reputation()
+            if member.id == reactor.id:
+                if f'{reactor.id}' not in self.selfvoters:
+                    self.selfvoters[f'{reactor.id}'] = 3
+                    callouts = yaml.load(open(self.callouts))
+                    index = randint(0, (len(callouts['selfvoters'])-1))
+                    await channel.send(str(callouts["selfvoters"][index]).format(f'{reactor.mention}'))
+                    return
+                elif self.selfvoters[f'{reactor.id}'] > 0:
+                    self.selfvoters[f'{reactor.id}'] -= 1
+                    return
+                else:
+                    self.selfvoters.pop(f'{reactor.id}', None)
+                    return
+
             if f'{member.id}' in rep.keys():
                 rep[f'{member.id}'] += 1
             else:
                 rep[f'{member.id}'] = 1
         elif self.downvote == str(payload.emoji):
             rep = await self.config.guild(message.guild).reputation()
+            if member.id == reactor.id:
+                return
             if f'{member.id}' in rep.keys():
                 if rep[f'{member.id}'] <= 0:
                     rep[f'{member.id}'] = 0
