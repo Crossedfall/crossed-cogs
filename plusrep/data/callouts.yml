@@ -2,5 +2,12 @@ selfvoters:
   - Upvoting yourself? Really {0}? That's just sad.
   - Stop! You have violated the law {0}! Pay the leaderboard a fine or serve your sentence. Your fraudulent votes are now forfeit. 
   - I'm sorry, but, did you really just upvote yourself {0}? For shame.
-  - You know I ignore people who vote for themselves, right?
+  - You know I ignore people who vote for themselves, right {0}?
   - Better stop while you're ahead {0}. It would be pretty embarrassing if someone called you out on the fact that you've been upvoting your own posts.
+  - So today we learned {0} is the type of person who upvotes their own  posts. Good to know.
+  - Wow, {0}, you really thought you could get away with upvoting your own post? Tsk tsk I'm always watching.
+  - Let the record reflect that {0} upvotes their own posts and also probably cheats at solitaire.
+  - Upvoting yourself again eh, {0}? Don't worry, I won't tell anyone.
+  - Hey {0}, you know you are supposed to upvote using your alt instead of your main right?
+  - It would appear as though {0} is laughing at their own joke.
+  - I can't tell if {0} is upvoting their own post, or if they just click everything on the screen.
