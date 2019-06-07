@@ -184,7 +184,7 @@ class PlusRep(BaseCog):
 
     @commands.is_owner()
     @plusrep.command()
-    async def tallyrep(self, ctx, posts: int = 2000):
+    async def tallyrep(self, ctx, posts: int = None):
         """
         Command to force a full recount of rep. This will be slow if there are a lot of messages to check
         """
