@@ -280,6 +280,8 @@ class PlusRep(BaseCog):
             return
         member = guild.get_member(message.author.id)
         reactor = guild.get_member(payload.user_id)
+        if reactor.bot is True:
+            return
         if message.author.bot:
             return
         #### Thanks Trusty for the above https://github.com/TrustyJAID/Trusty-cogs/blob/master/starboard/starboard.py#L756 ####
@@ -342,7 +344,10 @@ class PlusRep(BaseCog):
         if f'{channel.id}' not in ((await self.config.guild(message.guild).reaction_channels()).keys()):
             return
         member = guild.get_member(message.author.id)
+        reactor = guild.get_member(payload.user_id)
         if message.author.bot:
+            return
+        if reactor.bot is True:
             return
         if message.author.id == payload.user_id:
             return
