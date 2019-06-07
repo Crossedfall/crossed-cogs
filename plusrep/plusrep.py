@@ -184,7 +184,7 @@ class PlusRep(BaseCog):
 
     @commands.is_owner()
     @plusrep.command()
-    async def tallyrep(self, ctx):
+    async def tallyrep(self, ctx, posts: int = 2000):
         """
         Command to force a full recount of rep. This will be slow if there are a lot of messages to check
         """
@@ -194,7 +194,7 @@ class PlusRep(BaseCog):
         for channel in channels:
             try:
                 channel = self.bot.get_channel(int(channel))
-                async for message in channel.history(limit=2000):
+                async for message in channel.history(limit=posts):
                     if message.author.bot:
                         continue
                     if message.reactions:
