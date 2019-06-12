@@ -41,7 +41,7 @@ class Topmoji(BaseCog):
         channels = ctx.guild.text_channels
         count = {}
 
-        msg = await ctx.send("Counting emotes. This may take a while...")
+        await ctx.send("Counting emotes. This may take a while...")
         async with ctx.typing():
             for channel in channels:
                 try:
@@ -68,6 +68,6 @@ class Topmoji(BaseCog):
                     color=await ctx.embed_color(), description=(box(page, lang="md"))
                 )
                 page_list.append(embed)
-            await msg.edit(content=box(f"[Top Emotes]", lang="ini"))
+            msg = await ctx.send(content=box(f"[Top Emotes - Total Pages: {len(page_list)}]", lang="ini"))
             await menu(ctx, page_list, TOPMOJI_CONTROLS)
     
