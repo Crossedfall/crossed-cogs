@@ -1,0 +1,20 @@
+{
+    "author": [
+        "Crossedfall (Crossedfall#1001)"
+    ],
+    "install_msg": "This could be a huge resource whore. Use at your own risk.",
+    "name": "Topmoji",
+    "short": "Count up guild emote usage",
+    "description": "Counts the total number of times a guild emoji is used within said guild.",
+    "permissions": [
+        "Read Messages",
+        "Read Message History"
+    ],
+    "tags": [
+        "Misc",
+        "Emotes",
+        "Emojis",
+        "Guild Cogs",
+        "Utility"
+    ]
+}
