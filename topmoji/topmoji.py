@@ -37,31 +37,27 @@ class Topmoji(BaseCog):
         
         TOPMOJI_CONTROLS = {"⬅": prev_page, "❌": close_menu, "➡": next_page}
 
-        emojis = ctx.guild.emojis
-        channels = ctx.guild.text_channels
-        count = {}
+        emojis = {emote[1]:0 for emote in enumerate(await ctx.guild.fetch_emojis())}
 
         await ctx.send("Counting emotes. This may take a while...")
         async with ctx.typing():
-            for channel in channels:
+            for channel in ctx.guild.text_channels:
                 try:
                     async for message in channel.history(limit=max_history):
                         if message.author.bot is True:
                             continue
-                        for emoji in emojis:
-                            if f'{emoji.id}' in message.content:
-                                if f'{emoji.id}' not in count:
-                                    count[f'{emoji.id}'] = 1
-                                else:
-                                    count[f'{emoji.id}'] += 1
-                except discord.errors.Forbidden:
+                        for emote in ctx.guild.emojis:
+                            if f'{emote}' in message.content:
+                                emojis[emote] += 1
+                except (discord.errors.Forbidden, discord.errors.HTTPException):
                     continue
 
-            sorted_data = sorted(count.items(), key=lambda x: x[1], reverse=True)
+            sorted_data = sorted(emojis.items(), key=lambda x: x[1], reverse=True)
             message = "{emote:45}{num:5}\n".format(emote="Emote", num="Count")
-            for item in enumerate(sorted_data):
-                emote = f'{self.bot.get_emoji(int(item[1][0]))}'
-                message += f"{emote:45}{item[1][1]}\n"
+            for item in sorted_data:
+                if item[1] == 0:
+                    continue
+                message += f"{f'{item[0]}':45}{item[1]}\n"
             page_list = []
             for page in pagify(message, delims=["\n"], page_length=1000):
                 embed = discord.Embed(
