@@ -1,26 +1,8 @@
-<h1 align="center">Misc Cogs</h1>
-
-
+<h1 align="center">PlusRep</h1>
 
 ## Overview
 
-These are miscellaneous cogs lacking any specific group or organization I've made for myself. 
-
-| Cog        | Description                             |
-| ---------- | --------------------------------------- |
-| notekeeper | An organizational cog for keeping notes |
-
-## Setup
-
-### Redbot:
-
-Setup for your redbot V3 instance is a straightforward process. 
-
-1. Add this repo/branch with `[p]repo add crosseds-cogs https://github.com/crossedfall/crossed-cogs misc/master`
-2. Install the cogs you want to use with `[p]cog install crosseds-cogs [cogname]`
-3. Load your new cogs with `[p]load status [cogname]`
-
-_Any reference to [p] should be replaced with your prefix, [cogname] should be replaced with the cog you want to install_
+This cog is in development so no documentation currently exists.
 
 ### Contact:
 
