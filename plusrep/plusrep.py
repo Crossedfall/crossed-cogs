@@ -80,7 +80,7 @@ class PlusRep(BaseCog):
 
         if channels:
             for channel in channels.keys():
-                channel_obj = ctx.guild.get_channel(channel)
+                channel_obj = ctx.guild.get_channel(int(channel))
                 if channel_obj is not None:
                     msg += f"{channel_obj.mention} "
         
