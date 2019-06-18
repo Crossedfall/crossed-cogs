@@ -6,9 +6,11 @@
 
 These are miscellaneous cogs lacking any specific group or organization I've made for myself. 
 
-| Cog        | Description                             |
-| ---------- | --------------------------------------- |
-| notekeeper | An organizational cog for keeping notes |
+| Cog         | Description                                                  |
+| ----------- | ------------------------------------------------------------ |
+| notekeeper  | An organizational cog for keeping notes                      |
+| breenreacts | Neil Breen will react to your messages                       |
+| topmoji     | Counts how many times your guild's custom emotes are used and provides a ranking of the emotes based on their usage |
 
 ## Setup
 
