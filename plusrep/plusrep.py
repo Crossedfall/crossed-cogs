@@ -11,7 +11,7 @@ import discord
 from redbot.core import commands, checks, Config, utils
 from redbot.core.utils.predicates import MessagePredicate
 from redbot.core.utils.chat_formatting import box, pagify
-from redbot.core.utils.menus import menu, DEFAULT_CONTROLS, prev_page, next_page
+from redbot.core.utils.menus import menu, DEFAULT_CONTROLS, contextlib
 from redbot.core.data_manager import bundled_data_path, cog_data_path
 
 __version__ = "0.1.1" #Working but needs optimization and actual features
@@ -33,7 +33,7 @@ class PlusRep(BaseCog):
             "reaction_channels": {},
             "threshold": 0,
             "role": None,
-            "leaderboard_name": None
+            "leaderboard_name": "Reputation Leaderboard"
         }
 
         self.callouts = str(bundled_data_path(self) / 'callouts.yml')
@@ -139,8 +139,48 @@ class PlusRep(BaseCog):
         async def close_menu(ctx: commands.Context, pages: list, controls: dict, message: discord.Message, page: int, timeout: float, emoji: str):
             if message:
                 await message.delete()
-                await header.delete()
                 return None
+
+        async def next_page(
+            ctx: commands.Context,
+            pages: list,
+            controls: dict,
+            message: discord.Message,
+            page: int,
+            timeout: float,
+            emoji: str,
+        ):
+            perms = message.channel.permissions_for(ctx.me)
+            if perms.manage_messages:  # Can manage messages, so remove react
+                with contextlib.suppress(discord.NotFound):
+                    await message.remove_reaction(emoji, ctx.author)
+            if page == len(pages) - 1:
+                page = 0  # Loop around to the first item
+            else:
+                page = page + 1
+            pages[page].set_footer(text=f"Page {page+1} of {len(pages)}")
+            return await menu(ctx, pages, controls, message=message, page=page, timeout=timeout)
+
+
+        async def prev_page(
+            ctx: commands.Context,
+            pages: list,
+            controls: dict,
+            message: discord.Message,
+            page: int,
+            timeout: float,
+            emoji: str,
+        ):
+            perms = message.channel.permissions_for(ctx.me)
+            if perms.manage_messages:  # Can manage messages, so remove react
+                with contextlib.suppress(discord.NotFound):
+                    await message.remove_reaction(emoji, ctx.author)
+            if page == 0:
+                page = len(pages) - 1  # Loop around to the last item
+            else:
+                page = page - 1
+            pages[page].set_footer(text=f"Page {page+1} of {len(pages)}")
+            return await menu(ctx, pages, controls, message=message, page=page, timeout=timeout)
         
         LEADERBOARD_CONTROLS = {"⬅": prev_page, "❌": close_menu, "➡": next_page}
 
@@ -166,10 +206,13 @@ class PlusRep(BaseCog):
             page_list = []
             for page in pagify(msg, delims=["\n"], page_length=1000):
                 embed = discord.Embed(
-                    color=await ctx.embed_color(), description=(box(page, lang="md"))
+                    title=f"{lname}", color=await ctx.embed_color(), description=(box(page, lang="md"))
                 )
                 page_list.append(embed)
-            await header.edit(content=box(f"[{lname}]", lang="ini"))
+            try:
+                await header.delete()
+            except:
+                pass
             await menu(ctx, page_list, LEADERBOARD_CONTROLS)
             ### Thank you Aik for the above https://github.com/aikaterna/aikaterna-cogs/blob/v3/trickortreat/trickortreat.py#L187 ###
 
