@@ -209,6 +209,7 @@ class PlusRep(BaseCog):
                     title=f"{lname}", color=await ctx.embed_color(), description=(box(page, lang="md"))
                 )
                 page_list.append(embed)
+            page_list[0].set_footer(text=f"Page 1 of {len(page_list)}")
             try:
                 await header.delete()
             except:
