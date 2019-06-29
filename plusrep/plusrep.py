@@ -32,6 +32,7 @@ class PlusRep(BaseCog):
             "reputation": {},
             "reaction_channels": {},
             "threshold": 0,
+            "leaderboard_enabled": True,
             "role": None,
             "leaderboard_name": "Reputation Leaderboard"
         }
@@ -127,14 +128,34 @@ class PlusRep(BaseCog):
         
         await self.config.guild(ctx.guild).leaderboard_name.set(name)
         await ctx.send(f"Your leaderboard has been renamed to `{name}`.")
-        
 
+    @commands.admin_or_permissions(administrator=True)
+    @plusrep.command(aliases=["toggleleaderboard"])
+    async def leaderboardtoggle(self, ctx):
+        """
+        Toggles the leaderboard on/off
+        """
+        if (await self.config.guild(ctx.guild).leaderboard_enabled()) is True:
+            await self.config.guild(ctx.guild).leaderboard_enabled.set(False)
+            await ctx.send("The leaderboard has been disabled")
+        else:
+            await self.config.guild(ctx.guild).leaderboard_enabled.set(True)
+            await ctx.send("The leaderboard has been enabled.")
+        
     @plusrep.command()
     async def leaderboard(self, ctx):
         """
         Guild reputation leaderboard
         """
         header = await ctx.send("Populating leaderboard....")
+
+        if (await self.config.guild(ctx.guild).leaderboard_enabled()) is False:
+            await ctx.send("The leaderboard is currently disabled in this server.")
+            return
+        else:
+            header = await ctx.send("Populating leaderboard....")
+            lname = await self.config.guild(ctx.guild).leaderboard_name()
+            rep = await self.config.guild(ctx.guild).reputation()
 
         async def close_menu(ctx: commands.Context, pages: list, controls: dict, message: discord.Message, page: int, timeout: float, emoji: str):
             if message:
@@ -184,8 +205,6 @@ class PlusRep(BaseCog):
         
         LEADERBOARD_CONTROLS = {"⬅": prev_page, "❌": close_menu, "➡": next_page}
 
-        rep = await self.config.guild(ctx.guild).reputation()
-        lname = await self.config.guild(ctx.guild).leaderboard_name()
         if not rep:
             await header.edit(content="Nobody has any reputation!")
             return
