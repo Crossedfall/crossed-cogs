@@ -147,8 +147,7 @@ class PlusRep(BaseCog):
         """
         Guild reputation leaderboard
         """
-        header = await ctx.send("Populating leaderboard....")
-
+        
         if (await self.config.guild(ctx.guild).leaderboard_enabled()) is False:
             await ctx.send("The leaderboard is currently disabled in this server.")
             return
