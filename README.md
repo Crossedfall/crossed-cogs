@@ -1,7 +1,6 @@
 <h1 align="center">SS13 Cogs</h1>
 
 
-
 ## Overview
 
 These are utility cogs explicitly intended for SS13 servers leveraging off of the [/TG/](https://github.com/tgstation/tgstation) codebases. The idea is to provide a clean and convenient way to push data from the game to discord all while enjoying the many other benefits of having a [Red Bot V3 instance](https://github.com/Cog-Creators/Red-DiscordBot/tree/V3/develop). These cogs may work for other codebases, however, this has not been tested and it may require some added effort during setup.
@@ -104,7 +103,9 @@ In order to process the new config option, the following entry must be added to 
 
 #### Usage:
 
-Once the above is added into your codebase, you can send administrative notices directly into discord by calling the `send_discord_message(var/channel, var/message, var/priority_type)` function. Currently, the status cog will only check for new round notifications and messages directed at the admin channel. Any messages sent should ensure that the first parameter is set to `admin`. *Future development may grant added flexibility here.*
+Once the above is added into your codebase, you can send administrative notices directly into discord by calling the `send_discord_message(var/channel, var/message, var/priority_type)` function. The status cog can currently check for new round notifications, messages directed at the admin channel, and mentor tickets. 
+
+For any admin notices (e.g. round ending events or ahelps) ensure that the `admin` channel is set. If you have a mentorHelp system in place, you can send mentor tickets to discord using the `mentor` channel instead. **Note:** `admin` notices will provide an `@here` ping if there aren't any admins currently online when the announcement is sent. Notices using the `mentor` channel will not provide `@here` pings. 
 
 If, for example, you want to send new ticket admin notifications to discord you can do so using the following method within your [if(is_bwoik)](https://github.com/tgstation/tgstation/blob/master/code/modules/admin/verbs/adminhelp.dm#L192) statement.  
 
