@@ -39,6 +39,7 @@ class SS13Status(BaseCog):
             "server_url": "byond://127.0.0.1:7777", 
             "new_round_channel": None,
             "admin_notice_channel": None,
+            "mentor_notice_channel": None,
             "mention_role": None,
             "comms_key": "default_pwd",
             "listen_port": 8081,
@@ -59,6 +60,7 @@ class SS13Status(BaseCog):
 
     @commands.guild_only()
     @commands.group()
+    @checks.admin_or_permissions(administrator=True)
     async def setstatus(self, ctx):
         """
         Configuration group for the SS13 status command
@@ -66,7 +68,6 @@ class SS13Status(BaseCog):
         pass
     
     @setstatus.command(aliases=['host'])
-    @checks.is_owner()
     async def server(self, ctx, host: str):
         """
         Sets the server IP used for status checks, defaults to localhost
@@ -78,7 +79,6 @@ class SS13Status(BaseCog):
             await ctx.send("There was an error setting the host! Please check your entry and try again.")
     
     @setstatus.command()
-    @checks.is_owner()
     async def port(self, ctx, port: int):
         """
         Sets the port used for the status checks, defaults to 7777
@@ -93,7 +93,6 @@ class SS13Status(BaseCog):
             await ctx.send("There was a problem setting your port. Please check to ensure you're attempting to use a port from 1024 to 65535")
 
     @setstatus.command()
-    @checks.is_owner()
     async def offline(self, ctx, *, msg: str):
         """
         Set a custom message for whenever the server is offline.
@@ -105,7 +104,6 @@ class SS13Status(BaseCog):
             await ctx.send("There was a problem setting your custom offline message. Please check your entry and try again.")
     
     @setstatus.command()
-    @checks.is_owner()
     async def byondurl(self, ctx, url: str):
         """
         Set the byond URL for your server (For embeds)
@@ -118,7 +116,6 @@ class SS13Status(BaseCog):
             await ctx.send("There was a problem setting your server URL. Please check your entry and try again.")
     
     @setstatus.command()
-    @checks.is_owner()
     async def newroundchannel(self, ctx, text_channel: discord.TextChannel = None):
         """
         Set the text channel to display new round notifications. 
@@ -137,7 +134,6 @@ class SS13Status(BaseCog):
             await ctx.send("There was a problem setting the notification channel. Please check your entry and try again.")
 
     @setstatus.command()
-    @checks.is_owner()
     async def adminchannel(self, ctx, text_channel: discord.TextChannel = None):
         """
         Set the text channel to display admin notifications.
@@ -156,7 +152,24 @@ class SS13Status(BaseCog):
             await ctx.send("There was a problem setting the notification channel. Please check your entry and try again.")
 
     @setstatus.command()
-    @checks.is_owner()
+    async def mentorchannel(self, ctx, text_channel: discord.TextChannel = None):
+        """
+        Set the text channel to display mentor notifications.
+        
+        Use without providing a channel to reset this to None.
+        """
+        try:
+            if text_channel is not None:
+                await self.config.mentor_notice_channel.set(text_channel.id)
+                await ctx.send(f"Mentor notifications will be sent to: {text_channel.mention}")
+            else:
+                await self.config.mentor_notice_channel.set(None)
+                await ctx.send("I will no longer provide mentor notices.")
+
+        except(ValueError, KeyError, AttributeError):
+            await ctx.send("There was a problem setting the notification channel. Please check your entry and try again.")
+
+    @setstatus.command()
     async def mentionrole(self, ctx, role: discord.Role = None):
         """
         Sets a role to mention in new round notifications. 
@@ -175,7 +188,6 @@ class SS13Status(BaseCog):
 
 
     @setstatus.command()
-    @checks.is_owner()
     async def commskey(self, ctx, key: str):
         """
         Set the communications key for the server
@@ -192,7 +204,6 @@ class SS13Status(BaseCog):
             await ctx.send("There was a problem setting your communications key. Please check your entry and try again.")
 
     @setstatus.command()
-    @checks.is_owner()
     async def listenport(self, ctx, port: int):
         """
         Set the port you'd like the bot to listen on
@@ -208,7 +219,6 @@ class SS13Status(BaseCog):
             await ctx.send("There was a problem setting your port. Please check to ensure you're attempting to use a port from 1024 to 65535")
 
     @setstatus.command()
-    @checks.is_owner()
     async def timeout(self, ctx, seconds: int):
         """
         Sets the timeout duration for server status checks (in seconds)
@@ -220,7 +230,6 @@ class SS13Status(BaseCog):
             await ctx.send("There was a problem setting the timeout duration. Please check your input and try again.")
 
     @setstatus.command()
-    @checks.admin_or_permissions(administrator=True)
     async def current(self, ctx):
         """
         Lists the current settings
@@ -408,6 +417,7 @@ class SS13Status(BaseCog):
         #Message Handling#
         ##################
         admin_channel = self.bot.get_channel(await self.config.admin_notice_channel())
+        mentor_channel = self.bot.get_channel(await self.config.mentor_notice_channel())
         new_round_channel = self.bot.get_channel(await self.config.new_round_channel())
         if admin_channel is not None:
             mention_role = discord.utils.get(admin_channel.guild.roles, id=(await self.config.mention_role()))
@@ -453,6 +463,15 @@ class SS13Status(BaseCog):
 
                     else:
                         self.newroundmsg = await new_round_channel.send(embed=embed)
+            
+            elif ('announce_channel' in parsed_data) and ('mentor' in parsed_data['announce_channel']) and (mentor_channel is not None):
+                announce = str(*parsed_data['announce'])
+                ticket = announce.split('): ')
+                ticket[1] = parser.unescape(ticket[1])
+                embed = discord.Embed(title=f"{ticket[0]}):", description=ticket[1], color=0x935bfc)
+                if self.roundID is not None:
+                    embed.set_footer(text=f"Round: {self.roundID}")
+                await mentor_channel.send(embed=embed)
 
             elif ('announce_channel' in parsed_data) and ('admin' in parsed_data['announce_channel']) and (admin_channel is not None): #Secret messages only meant for admin eyes
                 announce = str(*parsed_data['announce'])
