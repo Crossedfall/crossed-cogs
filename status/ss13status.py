@@ -240,7 +240,7 @@ class SS13Status(BaseCog):
         for k, v in settings.items():
             if k is 'comms_key': #We don't want to actively display the comms key
                 embed.add_field(name=f"{k}:", value="`redacted`", inline=False)
-            elif (k is 'new_round_channel' or k is 'admin_notice_channel') and (v is not None): #Linkify channels
+            elif (k is 'new_round_channel' or k is 'admin_notice_channel' or k is 'mentor_notice_channel') and (v is not None): #Linkify channels
                 embed.add_field(name=f"{k}:", value=f"<#{v}>", inline=False)
             elif k is 'mention_role':
                 role = discord.utils.get(ctx.guild.roles, id=await self.config.mention_role())
