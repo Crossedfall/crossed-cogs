@@ -121,8 +121,8 @@ class GetNotes(BaseCog):
         settings = await self.config.guild(ctx.guild).all()
         embed=discord.Embed(title="__Current settings:__")
         for k, v in settings.items():
-            if k is not "admin_ckey":
-                if k is not "mysql_password": # Ensures that the database password is not sent
+            if k != "admin_ckey":
+                if k != "mysql_password": # Ensures that the database password is not sent
                     embed.add_field(name=f"{k}:",value=v,inline=False)
                 else:
                     embed.add_field(name=f"{k}:",value="`redacted`",inline=False)
@@ -142,7 +142,7 @@ class GetNotes(BaseCog):
             # Parse the data into individual fields within an embeded message in Discord for ease of viewing
             embed=discord.Embed(title=f"Notes for: {player}", description=f"Total notes: {len(rows)}", color=0xf1d592)
             for row in rows:
-                embed.add_field(name=f'{row["timestamp"]} UTC-5 (Central Time) | {row["type"]} by {row["adminckey"]}',value=row["text"], inline=False)
+                embed.add_field(name=f'{row["timestamp"]} (DB time) | {row["type"]} by {row["adminckey"]}',value=row["text"], inline=False)
             await message.edit(content=None,embed=embed)
         
         except mysql.connector.Error as err:

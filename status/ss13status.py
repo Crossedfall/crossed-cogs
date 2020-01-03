@@ -238,17 +238,17 @@ class SS13Status(BaseCog):
         embed=discord.Embed(title="__Current Settings:__")
         
         for k, v in settings.items():
-            if k is 'comms_key': #We don't want to actively display the comms key
+            if k == 'comms_key': #We don't want to actively display the comms key
                 embed.add_field(name=f"{k}:", value="`redacted`", inline=False)
-            elif (k is 'new_round_channel' or k is 'admin_notice_channel' or k is 'mentor_notice_channel') and (v is not None): #Linkify channels
+            elif (k == 'new_round_channel' or k == 'admin_notice_channel' or k == 'mentor_notice_channel') and (v is not None): #Linkify channels
                 embed.add_field(name=f"{k}:", value=f"<#{v}>", inline=False)
-            elif k is 'mention_role':
+            elif k == 'mention_role':
                 role = discord.utils.get(ctx.guild.roles, id=await self.config.mention_role())
                 if role is not None:
                     embed.add_field(name=f"{k}:", value=role.name)
                 else:
                     embed.add_field(name=f"{k}:", value=v)
-            elif k is 'timeout':
+            elif k == 'timeout':
                 embed.add_field(name=f"{k}:", value=f"{v} seconds")
             else:
                 embed.add_field(name=f"{k}:", value=v, inline=False)
