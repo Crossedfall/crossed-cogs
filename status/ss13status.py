@@ -8,6 +8,8 @@ import urllib.parse
 import html.parser as htmlparser
 import time
 import textwrap
+from datetime import datetime
+import logging
 
 #Discord Imports
 import discord
@@ -15,12 +17,12 @@ import discord
 #Redbot Imports
 from redbot.core import commands, checks, Config, utils
 
-__version__ = "1.0.1"
+__version__ = "1.1.0"
 __author__ = "Crossedfall"
 
-BaseCog = getattr(commands, "Cog", object)
+log = logging.getLogger("red.SS13Status")
 
-class SS13Status(BaseCog):
+class SS13Status(commands.Cog):
 
     def __init__(self, bot):
         self.serv = None #Will be the task responsible for incoming game data
@@ -33,8 +35,8 @@ class SS13Status(BaseCog):
         self.config = Config.get_conf(self, 3257193194, force_registration=True)
 
         default_global = {
-            "server": "127.0.0.1",
-            "game_port": 7777,
+            "server": None,
+            "game_port": None,
             "offline_message": "Currently offline",
             "server_url": "byond://127.0.0.1:7777", 
             "new_round_channel": None,
@@ -44,10 +46,12 @@ class SS13Status(BaseCog):
             "comms_key": "default_pwd",
             "listen_port": 8081,
             "timeout": 10,
+            "topic_toggle": False,
         }
 
         self.config.register_global(**default_global)
         self.serv = bot.loop.create_task(self.listener())
+        self.svr_chk_task = self.bot.loop.create_task(self.server_check_loop())
     
     def cog_unload(self):
         self.serv.cancel()
@@ -228,6 +232,27 @@ class SS13Status(BaseCog):
             await ctx.send(f"Timeout duration set to: `{seconds} seconds`")
         except(ValueError, KeyError, AttributeError):
             await ctx.send("There was a problem setting the timeout duration. Please check your input and try again.")
+
+    @setstatus.command()
+    async def toggletopic(self, ctx, toggle:bool = None):
+        """
+        Display the server's current status in the topic description.
+
+        With this enabled, the topic description will be automatically set with the server's latest details. Automatically updating every 5 minutes.
+        """
+
+        if toggle is None:
+            toggle = await self.config.topic_toggle()
+            toggle = not toggle
+
+        try:
+            await self.config.topic_toggle.set(toggle)
+            if toggle is True:
+                await ctx.send(f"I will display the server's status within the new round channel. If you haven't already, be sure to set that with `{ctx.prefix}setstatus newroundchannel <channel>`")
+            else:
+                await ctx.send("I will no longer display the server's status within the new round channel's topic description.")
+        except(ValueError, KeyError, AttributeError):
+            await ctx.send("There was a problem setting topic toggle. Please check your input and try again.")
 
     @setstatus.command()
     async def current(self, ctx):
@@ -521,3 +546,37 @@ class SS13Status(BaseCog):
 
         async with server: #Listen until the cog is unloaded or the bot shutsdown
             await server.serve_forever()
+
+    async def server_check_loop(self): #This will be used to cache statuses later
+        check_time = 300
+        now = datetime.utcnow()
+        while self == self.bot.get_cog("SS13Status"):
+            log.debug("Starting server checks")
+                     
+            channel = self.bot.get_channel(await self.config.new_round_channel())
+            toggle = await self.config.topic_toggle()
+            server = await self.config.server()
+            port = await self.config.game_port()
+            
+            if toggle is False or server is None or port is None or channel is None:
+                pass
+            else:
+
+                if channel.permissions_for(channel.guild.me).manage_channels is False:
+                    log.debug("Unable to set channel topic.")
+                    pass
+                else:
+                    status = await self.query_server(server, port)
+                    if status is not None:
+                        duration = int(*status['round_duration'])
+                        duration = time.strftime('%H:%M', time.gmtime(duration))
+                        topic = f"Server info for {await self.config.server_url()}: Players: {status['players'][0]} | Map: {str.title(*status['map_name'])} | Security Level: {str.title(*status['security_level'])} | Round Duration: {duration}"
+                    else:
+                        topic = f"Server info for {await self.config.server_url()}: Offline" 
+
+                    await channel.edit(topic=topic)
+
+            now = datetime.utcnow()
+            next_check = datetime.utcfromtimestamp(now.timestamp() + check_time)
+            log.debug("Done. Next check at {}".format(next_check.strftime("%Y-%m-%d %H:%M:%S")))
+            await asyncio.sleep(check_time)
