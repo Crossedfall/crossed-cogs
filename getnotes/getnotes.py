@@ -28,7 +28,7 @@ class GetNotes(BaseCog):
             "mysql_user": "ss13",
             "mysql_password": "password",
             "mysql_db": "feedback",
-            "admin_ckey": {}
+            "admin_ckey": {} #Future thing, not currently used
         }
 
         self.config.register_guild(**default_guild)
