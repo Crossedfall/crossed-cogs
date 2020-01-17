@@ -74,7 +74,7 @@ class SS13Status(commands.Cog):
     @setstatus.command(aliases=['host'])
     async def server(self, ctx, host: str):
         """
-        Sets the server IP used for status checks, defaults to localhost
+        Sets the server IP used for status checks
         """
         try:
             await self.config.server.set(host)
@@ -85,7 +85,7 @@ class SS13Status(commands.Cog):
     @setstatus.command()
     async def port(self, ctx, port: int):
         """
-        Sets the port used for the status checks, defaults to 7777
+        Sets the port used for the status checks
         """
         try:
             if 1024 <= port <= 65535: # We don't want to allow reserved ports to be set
@@ -122,7 +122,7 @@ class SS13Status(commands.Cog):
     @setstatus.command()
     async def newroundchannel(self, ctx, text_channel: discord.TextChannel = None):
         """
-        Set the text channel to display new round notifications. 
+        Sets the channel for new round notifications. 
         
         Use without providing a channel to reset this to None.
         """
@@ -158,7 +158,7 @@ class SS13Status(commands.Cog):
     @setstatus.command()
     async def mentorchannel(self, ctx, text_channel: discord.TextChannel = None):
         """
-        Set the text channel to display mentor notifications.
+        Set the text channel for mentor notifications.
         
         Use without providing a channel to reset this to None.
         """
@@ -225,7 +225,7 @@ class SS13Status(commands.Cog):
     @setstatus.command()
     async def timeout(self, ctx, seconds: int):
         """
-        Sets the timeout duration for server status checks (in seconds)
+        Sets the timeout duration for status checks
         """
         try:
             await self.config.timeout.set(seconds)
@@ -236,7 +236,7 @@ class SS13Status(commands.Cog):
     @setstatus.command()
     async def toggletopic(self, ctx, toggle:bool = None):
         """
-        Display the server's current status in the topic description.
+        Channel topic status toggle
 
         With this enabled, the topic description will be automatically set with the server's latest details. Automatically updating every 5 minutes.
         """
@@ -286,10 +286,14 @@ class SS13Status(commands.Cog):
         """
         Lists the current players on the server
         """
-        server = socket.gethostbyname(await self.config.server())
         port = await self.config.game_port()
-        data = await self.query_server(server,port,"?whoIs")
-
+        try:
+            server = socket.gethostbyname(await self.config.server())
+            data = await self.query_server(server,port,"?whoIs")
+        except TypeError:
+            await ctx.send(f"Failed to get players. Check that you have fully configured this cog using `{ctx.prefix}setstatus`.")
+            return
+            
         if data:
             try:
                 players = [i for i in data['players']]
@@ -308,9 +312,13 @@ class SS13Status(commands.Cog):
         """
         List the current admins on the server
         """
-        server = socket.gethostbyname(await self.config.server())
         port = await self.config.game_port()
-        data = await self.query_server(server,port,"?getAdmins")
+        try:
+            server = socket.gethostbyname(await self.config.server())
+            data = await self.query_server(server,port,"?getAdmins")
+        except TypeError:
+            await ctx.send(f"Failed to get admins. Check that you have fully configured this cog using `{ctx.prefix}setstatus`.")
+            return
 
         if data:
             try:
@@ -333,12 +341,15 @@ class SS13Status(commands.Cog):
         """
         Gets the current server status and round details
         """
-        server = socket.gethostbyname(await self.config.server())
         port = await self.config.game_port()        
         msg = await self.config.offline_message()
         server_url = await self.config.server_url()
-
-        data = await self.query_server(server, port)
+        try:
+            server = socket.gethostbyname(await self.config.server())
+            data = await self.query_server(server, port)
+        except TypeError:
+            await ctx.send(f"Failed to get the server's status. Check that you have fully configured this cog using `{ctx.prefix}setstatus`.")
+            return 
 
         if not data: #Server is not responding, send the offline message
             embed=discord.Embed(title="__Server Status:__", description=f"{msg}", color=0xff0000)
