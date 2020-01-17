@@ -44,6 +44,10 @@ The status cog operates by probing the server with a `?status` request and then 
 | :-----------------------------------------------: | :-----------------------------------------------: |
 | ![1543959022724](https://i.imgur.com/7K1x9nd.png) | ![1544039500509](https://i.imgur.com/EXe4p1T.png) |
 
+The status cog is also capable of displaying current round information within a set channel's topic description. This live status report will automatically update itself every 5-minutes. 
+
+![topic](https://i.imgur.com/QSYgvBx.png)
+
 In addition to the above, the status cog also has a listening function to serve incoming game data provided by your SS13 server. Currently, this cog serves new round and administrative notices using the following subsystem. In order for the status cog to receive said notifications, this controller subsystem will need to be added into your codebase and loaded into your dme file. (`code/controllers/subsystem/redbot.dm`)
 
 ```dm
