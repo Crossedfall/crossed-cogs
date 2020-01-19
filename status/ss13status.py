@@ -254,6 +254,13 @@ class SS13Status(commands.Cog):
         except(ValueError, KeyError, AttributeError):
             await ctx.send("There was a problem setting topic toggle. Please check your input and try again.")
 
+        try:
+            channel = self.bot.get_channel(await self.config.new_round_channel())
+            if channel is not None:
+                await channel.edit(topic="")
+        except:
+            await ctx.send("I was unable to clear the channel's current topic. You might want to clear it manually.")
+
     @setstatus.command()
     async def current(self, ctx):
         """
