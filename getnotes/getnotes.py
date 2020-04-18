@@ -9,9 +9,11 @@ from typing import Union
 import discord
 
 #Redbot Imports
-from redbot.core import commands, checks, Config, utils
+from redbot.core import commands, checks, Config
+from redbot.core.utils.chat_formatting import pagify, box
+from redbot.core.utils.menus import menu, DEFAULT_CONTROLS
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __author__ = "Crossedfall"
 
 
@@ -28,6 +30,8 @@ class GetNotes(BaseCog):
             "mysql_user": "ss13",
             "mysql_password": "password",
             "mysql_db": "feedback",
+            "mysql_prefix": "",
+            "currency_name": "Currency",
             "admin_ckey": {} #Future thing, not currently used
         }
 
@@ -49,7 +53,7 @@ class GetNotes(BaseCog):
         """
         try:
             await self.config.guild(ctx.guild).mysql_host.set(db_host)
-            await ctx.send(f"Database host set to: {db_host}")
+            await ctx.send(f"Database host set to: `{db_host}`")
         except (ValueError, KeyError, AttributeError):
             await ctx.send("There was an error setting the database's ip/hostname. Please check your entry and try again!")
     
@@ -62,7 +66,7 @@ class GetNotes(BaseCog):
         try:
             if 1024 <= db_port <= 65535: # We don't want to allow reserved ports to be set
                 await self.config.guild(ctx.guild).mysql_port.set(db_port)
-                await ctx.send(f"Database port set to: {db_port}")
+                await ctx.send(f"Database port set to: `{db_port}`")
             else:
                 await ctx.send(f"{db_port} is not a valid port!")
         except (ValueError, KeyError, AttributeError):
@@ -78,7 +82,7 @@ class GetNotes(BaseCog):
         """
         try:
             await self.config.guild(ctx.guild).mysql_user.set(user)
-            await ctx.send(f"User set to: {user}")
+            await ctx.send(f"User set to: `{user}`")
         except (ValueError, KeyError, AttributeError):
             await ctx.send("There was a problem setting the username for your database.")
     
@@ -108,9 +112,46 @@ class GetNotes(BaseCog):
         """
         try:
             await self.config.guild(ctx.guild).mysql_db.set(db)
-            await ctx.send(f"Database set to: {db}")
+            await ctx.send(f"Database set to: `{db}`")
         except (ValueError, KeyError, AttributeError):
             await ctx.send ("There was a problem setting your notes database.")
+    
+    @setnotes.command()
+    @checks.is_owner()
+    async def prefix(self, ctx, prefix: str = None):
+        """
+        Sets the database prefix (if applicable)
+
+        Leave blank to remove this option
+        """
+        try:
+            if prefix is None:
+                await self.config.guild(ctx.guild).mysql_prefix.set("")
+                await ctx.send(f"Database prefix removed!")
+            else:
+                await self.config.guild(ctx.guild).mysql_prefix.set(prefix)
+                await ctx.send(f"Database prefix set to: `{prefix}`")
+        
+        except (ValueError, KeyError, AttributeError):
+            await ctx.send("There was a problem setting your database prefix")
+    
+    @setnotes.command()
+    @checks.is_owner()
+    async def currencyname(self, ctx, name: str = None):
+        """
+        Set the name of your meta currency
+
+        Leave blank to reset this option back to the default
+        """
+        try:
+            if name is None:
+                await self.config.guild(ctx.guild).currency_name("Currency")
+                await ctx.send(f"Metacurrency name reset to `Currency`")
+            else:
+                await self.config.guild(ctx.guild).currency_name(name)
+                await ctx.send(f"Metacurrency name set to: `{name}`")
+        except (ValueError, KeyError, AttributeError):
+            await ctx.send("There was a problem setting your currency's name")
     
     @setnotes.command()
     @checks.admin_or_permissions(administrator=True)
@@ -123,6 +164,8 @@ class GetNotes(BaseCog):
         for k, v in settings.items():
             if k != "admin_ckey":
                 if k != "mysql_password": # Ensures that the database password is not sent
+                    if v == "":
+                        v = None
                     embed.add_field(name=f"{k}:",value=v,inline=False)
                 else:
                     embed.add_field(name=f"{k}:",value="`redacted`",inline=False)
@@ -134,16 +177,35 @@ class GetNotes(BaseCog):
         """
         Gets the notes for a specific player
         """
-        query = f"SELECT timestamp, adminckey, text, type FROM messages WHERE targetckey='{player.lower()}' ORDER BY timestamp DESC"
+        prefix = await self.config.guild(ctx.guild).mysql_prefix()
+
+        query = f"SELECT timestamp, adminckey, text, type, deleted FROM {prefix}messages WHERE targetckey='{player.lower()}' ORDER BY timestamp DESC"
         message = await ctx.send("Getting player notes...")
 
         try:
             rows = await self.query_database(ctx, query)
             # Parse the data into individual fields within an embeded message in Discord for ease of viewing
-            embed=discord.Embed(title=f"Notes for: {player}", description=f"Total notes: {len(rows)}", color=0xf1d592)
+            notes = ""
+            total = 0
+            temp_embeds = []
+            embeds = []
             for row in rows:
-                embed.add_field(name=f'{row["timestamp"]} (DB time) | {row["type"]} by {row["adminckey"]}',value=row["text"], inline=False)
-            await message.edit(content=None,embed=embed)
+                if row['deleted'] == 1:
+                    continue
+                total += 1
+                notes += f"\n[{row['timestamp']} | {row['type']} by {row['adminckey']}]\n{row['text']}"
+            for note in pagify(notes):
+                embed = discord.Embed(description=box(note, lang="asciidoc"), color=0xf1d592)
+                temp_embeds.append(embed)
+            max_i = len(temp_embeds)
+            i = 1
+            for embed in temp_embeds:
+                embed.set_author(name=f"Notes for {player} | Total notes: {total}")
+                embed.set_footer(text=f"Page {i}/{max_i} | All times are server time")
+                embeds.append(embed)
+                i += 1
+            await message.delete()
+            await menu(ctx, embeds, DEFAULT_CONTROLS)
         
         except mysql.connector.Error as err:
             embed=discord.Embed(title=f"Error looking up notes for: {player}", description=f"{format(err)}", color=0xff0000)
@@ -156,17 +218,19 @@ class GetNotes(BaseCog):
         """
         Runs multiple database queries to obtain the player's information
         """
+        prefix = await self.config.guild(ctx.guild).mysql_prefix()
+
         try:
             # First query is determined by the identifier given 
             if ip:
                 #IPs are stored as a 32 bit integer in the databse. We need to convert it before doing the query.
-                query = f"SELECT ckey, firstseen, lastseen, computerid, ip, accountjoindate FROM player WHERE ip='{int(ipaddress.IPv4Address(ip))}'"
+                query = f"SELECT ckey, firstseen, lastseen, computerid, ip, accountjoindate FROM {prefix}player WHERE ip='{int(ipaddress.IPv4Address(ip))}'"
                 query = await self.query_database(ctx, query)
             elif ckey:
-                query = f"SELECT ckey, firstseen, lastseen, computerid, ip, accountjoindate FROM player WHERE ckey='{ckey}'"
+                query = f"SELECT ckey, firstseen, lastseen, computerid, ip, accountjoindate FROM {prefix}player WHERE ckey='{ckey}'"
                 query = await self.query_database(ctx, query)
             elif cid:
-                query = f"SELECT ckey, firstseen, lastseen, computerid, ip, accountjoindate FROM player WHERE computerid='{cid}'"
+                query = f"SELECT ckey, firstseen, lastseen, computerid, ip, accountjoindate FROM {prefix}player WHERE computerid='{cid}'"
                 query = await self.query_database(ctx, query)
 
             results = {}
@@ -182,12 +246,42 @@ class GetNotes(BaseCog):
             results['join'] = query['accountjoindate']
 
             #Obtain the number of total connections
-            query = f"SELECT COUNT(*) FROM connection_log WHERE ckey='{results['ckey']}'"
+            query = f"SELECT COUNT(*) FROM {prefix}connection_log WHERE ckey='{results['ckey']}'"
             query = await self.query_database(ctx, query)
             results['num_connections'] = query[0]['COUNT(*)']
 
+            #Obtain role time statistics
+            query = f"SELECT job, minutes FROM {prefix}role_time WHERE ckey='{ckey}' AND (job='Ghost' OR job='Living')"
+            query = await self.query_database(ctx, query)
+            if query:
+                for job in query:
+                    if job['job'] == "Living":
+                        results['living_time'] = job['minutes'] // 60
+                    else:
+                        results['ghost_time'] = job['minutes'] // 60
+            else:
+                results['living_time'] = 0
+                results['ghost_time'] = 0
+
+            results['total_time'] = results['living_time'] + results['ghost_time']
+
+            #Obtain metacoins and antag tokens (if avaialble).
+            query = f"SELECT metacoins FROM {prefix}player WHERE ckey='{results['ckey']}'"
+            try:
+                query = await self.query_database(ctx, query)
+                results['metacoins'] = (query[0])['metacoins']
+            except mysql.connector.Error:
+                pass
+            
+            query = f"SELECT antag_tokens FROM {prefix}player WHERE ckey='{results['ckey']}'"
+            try:
+                query = await self.query_database(ctx, query)
+                results['antag_tokens'] = (query[0])['antag_tokens']
+            except mysql.connector.Error:
+                pass
+
             #Obtain the number of bans and, if applicable, the last ban
-            query = f"SELECT bantime FROM ban WHERE ckey='{results['ckey']}' ORDER BY bantime DESC"
+            query = f"SELECT bantime FROM {prefix}ban WHERE ckey='{results['ckey']}' ORDER BY bantime DESC"
             query = await self.query_database(ctx, query)
             results['num_bans'] = len(query)
             if results['num_bans'] > 0:
@@ -196,7 +290,7 @@ class GetNotes(BaseCog):
                 results['latest_ban'] = None
 
             #Obtain the total number of notes
-            query = f"SELECT COUNT(*) FROM messages WHERE targetckey='{results['ckey']}'"
+            query = f"SELECT COUNT(*) FROM {prefix}messages WHERE targetckey='{results['ckey']}'"
             query = await self.query_database(ctx, query)
             results['notes'] = query[0]['COUNT(*)']
 
@@ -230,9 +324,17 @@ class GetNotes(BaseCog):
                     return
 
             if player:
+                
                 embed=discord.Embed(color=await ctx.embed_color())
 
+                player_stats = f"**Playtime**: {player['total_time']}h ({player['living_time']}h/{player['ghost_time']}h)"
+                if 'metacoins' in player.keys():
+                    player_stats += f"\n**{await self.config.guild(ctx.guild).currency_name()}**: {player['metacoins']}"
+                if 'antag_tokens' in player.keys():
+                    player_stats += f"\n**Antag Tokens**: {player['antag_tokens']}"
+
                 embed.add_field(name="__Identity:__",value=f"**CKEY**: {player['ckey']}\n**CID**: {player['cid']}\n**IP**: {player['ip']}\n**Account Join Date**: {player['join']}", inline=False)                    
+                embed.add_field(name="__Player Statistics__:", value=player_stats, inline=False)
                 embed.add_field(name="__Connection Information:__", value=f"**First Seen**: {player['first']}\n**Last Seen**: {player['last']}\n**Number of Connections**: {player['num_connections']}", inline=False)
                 embed.add_field(name="__Bans/Notes:__", value=f"**Number of Notes**: {player['notes']}\n**Number of Bans**: {player['num_bans']}\n**Last Ban**: {player['latest_ban']}", inline=False)
 
@@ -240,10 +342,7 @@ class GetNotes(BaseCog):
 
                 # After 5-minutes redact the player's CID and IP.
                 await asyncio.sleep(300)
-                embed.clear_fields()
-                embed.add_field(name="__Identity:__",value=f"**CKEY**: {player['ckey']}\n**CID**: `[Redacted]`\n**IP**: `[Redacted]`\n**Account Join Date**: {player['join']}", inline=False)                    
-                embed.add_field(name="__Connection Information:__", value=f"**First Seen**: {player['first']}\n**Last Seen**: {player['last']}\n**Number of connections**: {player['num_connections']}", inline=False)
-                embed.add_field(name="__Bans/Notes:__", value=f"**Number of notes**: {player['notes']}\n**Number of Bans**: {player['num_bans']}\n**Last Ban**: {player['latest_ban']}", inline=False)
+                embed.set_field_at(0, name="__Identity:__",value=f"**CKEY**: {player['ckey']}\n**CID**: `[Redacted]`\n**IP**: `[Redacted]`\n**Account Join Date**: {player['join']}", inline=False)                    
 
                 await message.edit(content=None, embed=embed)
             else:
