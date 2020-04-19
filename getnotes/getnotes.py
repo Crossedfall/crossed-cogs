@@ -145,10 +145,10 @@ class GetNotes(BaseCog):
         """
         try:
             if name is None:
-                await self.config.guild(ctx.guild).currency_name("Currency")
+                await self.config.guild(ctx.guild).currency_name.set("Currency")
                 await ctx.send(f"Metacurrency name reset to `Currency`")
             else:
-                await self.config.guild(ctx.guild).currency_name(name)
+                await self.config.guild(ctx.guild).currency_name.set(str(name).title())
                 await ctx.send(f"Metacurrency name set to: `{name}`")
         except (ValueError, KeyError, AttributeError):
             await ctx.send("There was a problem setting your currency's name")
