@@ -299,6 +299,28 @@ class GetNotes(BaseCog):
         except:
             raise
         
+    @commands.command(aliases=['ckey'])
+    async def playerinfo(self, ctx, *,player: str):
+        """
+        Lookup a player's stats based on their ckey
+        """
+
+        message = await ctx.send("Looking up player....")
+        
+        async with ctx.typing():
+            embed=discord.Embed(color=await ctx.embed_color())
+            embed.set_author(name=f"Player info for {str(player).title()}")
+            player = await self.player_search(ctx, ckey=player)
+            
+        player_stats = f"**Playtime**: {player['total_time']}h ({player['living_time']}h/{player['ghost_time']}h)"
+        if 'metacoins' in player.keys():
+            player_stats += f"\n**{await self.config.guild(ctx.guild).currency_name()}**: {player['metacoins']}"
+        if 'antag_tokens' in player.keys():
+            player_stats += f"\n**Antag Tokens**: {player['antag_tokens']}"
+
+        embed.add_field(name="__Player Statistics__:", value=player_stats, inline=False)
+        embed.add_field(name="__Connection Information:__", value=f"**First Seen**: {player['first']}\n**Last Seen**: {player['last']}\n**Number of Connections**: {player['num_connections']}", inline=False)
+        await message.edit(content=None, embed=embed)
 
     @checks.mod_or_permissions(administrator=True)
     @commands.command()
@@ -326,6 +348,7 @@ class GetNotes(BaseCog):
             if player:
                 
                 embed=discord.Embed(color=await ctx.embed_color())
+                embed.set_author(name=f"Player info for {str(player['ckey']).title()}")
 
                 player_stats = f"**Playtime**: {player['total_time']}h ({player['living_time']}h/{player['ghost_time']}h)"
                 if 'metacoins' in player.keys():
