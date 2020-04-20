@@ -178,7 +178,7 @@ class GetNotes(BaseCog):
         Gets the notes for a specific player
         """
         if " " in player:
-           player = player.replace(" ", "")
+           player = player.replace(" ", "") # The database does not support ckeys with spaces
             
         prefix = await self.config.guild(ctx.guild).mysql_prefix()
 
@@ -310,6 +310,8 @@ class GetNotes(BaseCog):
         """
         Lookup a player's stats based on their ckey
         """
+        if " " in player:
+           player = player.replace(" ", "") # The database does not support ckeys with spaces
 
         message = await ctx.send("Looking up player....")
         
@@ -336,7 +338,9 @@ class GetNotes(BaseCog):
 
         Will search for players using a provided IP, CID, or CKEY. 
         """
-
+        if " " in player:
+           player = player.replace(" ", "") # The database does not support ckeys with spaces
+           
         try:
             message = await ctx.send("Looking up player....")
             async with ctx.typing():
