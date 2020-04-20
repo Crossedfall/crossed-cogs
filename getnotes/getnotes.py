@@ -39,6 +39,7 @@ class GetNotes(BaseCog):
     
     @commands.guild_only()
     @commands.group()
+    @checks.admin_or_permissions(administrator=True)
     async def setnotes(self,ctx): 
         """
         SS13 MySQL database settings
@@ -154,7 +155,6 @@ class GetNotes(BaseCog):
             await ctx.send("There was a problem setting your currency's name")
     
     @setnotes.command()
-    @checks.admin_or_permissions(administrator=True)
     async def current(self,ctx):
         """
         Gets the current settings for the notes database
