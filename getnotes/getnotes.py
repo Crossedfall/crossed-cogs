@@ -173,10 +173,13 @@ class GetNotes(BaseCog):
 
     @checks.mod_or_permissions(administrator=True)
     @commands.command()
-    async def notes(self, ctx, player: str):
+    async def notes(self, ctx, *,player: str):
         """
         Gets the notes for a specific player
         """
+        if " " in player:
+           player = player.replace(" ", "")
+            
         prefix = await self.config.guild(ctx.guild).mysql_prefix()
 
         query = f"SELECT timestamp, adminckey, text, type, deleted FROM {prefix}messages WHERE targetckey='{player.lower()}' ORDER BY timestamp DESC"
@@ -184,6 +187,9 @@ class GetNotes(BaseCog):
 
         try:
             rows = await self.query_database(ctx, query)
+            if not rows:
+                embed=discord.Embed(description=f"No notes found for: {str(player).title()}", color=0xf1d592)
+                return await message.edit(content=None,embed=embed)
             # Parse the data into individual fields within an embeded message in Discord for ease of viewing
             notes = ""
             total = 0
