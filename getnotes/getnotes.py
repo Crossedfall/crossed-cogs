@@ -3,6 +3,7 @@ import asyncio
 import mysql.connector
 import socket
 import ipaddress
+import re
 from typing import Union
 
 #Discord Imports
@@ -177,8 +178,7 @@ class GetNotes(BaseCog):
         """
         Gets the notes for a specific player
         """
-        if " " in player:
-           player = player.replace(" ", "") # The database does not support ckeys with spaces
+        player = re.sub('[^A-Za-z0-9]+', '', player) # The database does not support ckeys with spaces or special characters
             
         prefix = await self.config.guild(ctx.guild).mysql_prefix()
 
@@ -265,6 +265,12 @@ class GetNotes(BaseCog):
                         results['living_time'] = job['minutes'] // 60
                     else:
                         results['ghost_time'] = job['minutes'] // 60
+
+                if 'living_time' not in results.keys():
+                    results['living_time'] = 0
+                if 'ghost_time' not in results.keys():
+                    results['ghost_time'] = 0
+
             else:
                 results['living_time'] = 0
                 results['ghost_time'] = 0
@@ -310,8 +316,7 @@ class GetNotes(BaseCog):
         """
         Lookup a player's stats based on their ckey
         """
-        if " " in player:
-           player = player.replace(" ", "") # The database does not support ckeys with spaces
+        player = re.sub('[^A-Za-z0-9]+', '', player) # The database does not support ckeys with spaces or special characters
 
         message = await ctx.send("Looking up player....")
         
@@ -338,9 +343,7 @@ class GetNotes(BaseCog):
 
         Will search for players using a provided IP, CID, or CKEY. 
         """
-        if " " in player:
-           player = player.replace(" ", "") # The database does not support ckeys with spaces
-           
+
         try:
             message = await ctx.send("Looking up player....")
             async with ctx.typing():
@@ -350,6 +353,7 @@ class GetNotes(BaseCog):
                 elif type(player) is int:
                     player = await self.player_search(ctx, cid=player)
                 elif type(player) is str:
+                    player = re.sub('[^A-Za-z0-9]+', '', player) # The database does not support ckeys with spaces or special characters
                     player = await self.player_search(ctx, ckey=player)
                 else:
                     await message.edit(content="That doesn't look like an IP, CID, or CKEY. Please check your entry and try again!")
