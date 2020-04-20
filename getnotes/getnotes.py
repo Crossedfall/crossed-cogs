@@ -200,7 +200,7 @@ class GetNotes(BaseCog):
             max_i = len(temp_embeds)
             i = 1
             for embed in temp_embeds:
-                embed.set_author(name=f"Notes for {player} | Total notes: {total}")
+                embed.set_author(name=f"Notes for {str(player).title()} | Total notes: {total}")
                 embed.set_footer(text=f"Page {i}/{max_i} | All times are server time")
                 embeds.append(embed)
                 i += 1
