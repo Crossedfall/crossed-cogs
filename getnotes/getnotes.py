@@ -325,7 +325,7 @@ class GetNotes(BaseCog):
             player_stats += f"\n**Antag Tokens**: {player['antag_tokens']}"
 
         embed.add_field(name="__Player Statistics__:", value=player_stats, inline=False)
-        embed.add_field(name="__Connection Information:__", value=f"**First Seen**: {player['first']}\n**Last Seen**: {player['last']}\n**Number of Connections**: {player['num_connections']}", inline=False)
+        embed.add_field(name="__Connection Information:__", value=f"**First Seen**: {player['first']}\n**Last Seen**: {player['last']}\n**Account Join Date**: {player['join']}\n**Number of Connections**: {player['num_connections']}", inline=False)
         await message.edit(content=None, embed=embed)
 
     @checks.mod_or_permissions(administrator=True)
