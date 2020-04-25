@@ -318,22 +318,36 @@ class GetNotes(BaseCog):
         """
         player = re.sub('[^A-Za-z0-9]+', '', player) # The database does not support ckeys with spaces or special characters
 
-        message = await ctx.send("Looking up player....")
-        
-        async with ctx.typing():
-            embed=discord.Embed(color=await ctx.embed_color())
-            embed.set_author(name=f"Player info for {str(player).title()}")
-            player = await self.player_search(ctx, ckey=player)
+        try:
+            message = await ctx.send("Looking up player....")
             
-        player_stats = f"**Playtime**: {player['total_time']}h ({player['living_time']}h/{player['ghost_time']}h)"
-        if 'metacoins' in player.keys():
-            player_stats += f"\n**{await self.config.guild(ctx.guild).currency_name()}**: {player['metacoins']}"
-        if 'antag_tokens' in player.keys():
-            player_stats += f"\n**Antag Tokens**: {player['antag_tokens']}"
+            async with ctx.typing():
+                embed=discord.Embed(color=await ctx.embed_color())
+                embed.set_author(name=f"Player info for {str(player).title()}")
+                player = await self.player_search(ctx, ckey=player)
+                
+            if(player):    
+                player_stats = f"**Playtime**: {player['total_time']}h ({player['living_time']}h/{player['ghost_time']}h)"
+                if 'metacoins' in player.keys():
+                    player_stats += f"\n**{await self.config.guild(ctx.guild).currency_name()}**: {player['metacoins']}"
+                if 'antag_tokens' in player.keys():
+                    player_stats += f"\n**Antag Tokens**: {player['antag_tokens']}"
 
-        embed.add_field(name="__Player Statistics__:", value=player_stats, inline=False)
-        embed.add_field(name="__Connection Information:__", value=f"**First Seen**: {player['first']}\n**Last Seen**: {player['last']}\n**Account Join Date**: {player['join']}\n**Number of Connections**: {player['num_connections']}", inline=False)
-        await message.edit(content=None, embed=embed)
+                embed.add_field(name="__Player Statistics__:", value=player_stats, inline=False)
+                embed.add_field(name="__Connection Information:__", value=f"**First Seen**: {player['first']}\n**Last Seen**: {player['last']}\n**Account Join Date**: {player['join']}\n**Number of Connections**: {player['num_connections']}", inline=False)
+                await message.edit(content=None, embed=embed)
+            else:
+                await message.edit(content="No results found.")
+
+        except mysql.connector.Error as err:
+            embed=discord.Embed(title=f"Error looking up player", description=f"{format(err)}", color=0xff0000)
+            await message.edit(content=None,embed=embed)
+            return
+        
+        except ModuleNotFoundError:
+            await message.edit(content="`mysql-connector` requirement not found! Please install this requirement using `pip install mysql-connector`.")
+            return          
+
 
     @checks.mod_or_permissions(administrator=True)
     @commands.command()
