@@ -243,7 +243,7 @@ class GetNotes(BaseCog):
             try:
                 query = query[0] # Checks to see if a player was found, if the list is empty nothing was found so we return the empty dict.
             except IndexError:
-                return results
+                return None
             results['ip'] = ipaddress.IPv4Address(query['ip']) #IP's are stored as a 32 bit integer, converting it for readability
             results['cid'] = query['computerid']
             results['ckey'] = query['ckey']
@@ -258,7 +258,11 @@ class GetNotes(BaseCog):
 
             #Obtain role time statistics
             query = f"SELECT job, minutes FROM {prefix}role_time WHERE ckey='{ckey}' AND (job='Ghost' OR job='Living')"
-            query = await self.query_database(ctx, query)
+            try:
+                query = await self.query_database(ctx, query)
+            except mysql.connector.Error:
+                query = None
+
             if query:
                 for job in query:
                     if job['job'] == "Living":
@@ -318,22 +322,33 @@ class GetNotes(BaseCog):
         """
         player = re.sub('[^A-Za-z0-9]+', '', player) # The database does not support ckeys with spaces or special characters
 
-        message = await ctx.send("Looking up player....")
-        
-        async with ctx.typing():
-            embed=discord.Embed(color=await ctx.embed_color())
-            embed.set_author(name=f"Player info for {str(player).title()}")
-            player = await self.player_search(ctx, ckey=player)
+        try:
+            message = await ctx.send("Looking up player....")
+            async with ctx.typing():
+                embed=discord.Embed(color=await ctx.embed_color())
+                embed.set_author(name=f"Player info for {str(player).title()}")
+                player = await self.player_search(ctx, ckey=player)
             
-        player_stats = f"**Playtime**: {player['total_time']}h ({player['living_time']}h/{player['ghost_time']}h)"
-        if 'metacoins' in player.keys():
-            player_stats += f"\n**{await self.config.guild(ctx.guild).currency_name()}**: {player['metacoins']}"
-        if 'antag_tokens' in player.keys():
-            player_stats += f"\n**Antag Tokens**: {player['antag_tokens']}"
+            if player is None:
+                raise ValueError
+                
+            player_stats = f"**Playtime**: {player['total_time']}h ({player['living_time']}h/{player['ghost_time']}h)"
+            if 'metacoins' in player.keys():
+                player_stats += f"\n**{await self.config.guild(ctx.guild).currency_name()}**: {player['metacoins']}"
+            if 'antag_tokens' in player.keys():
+                player_stats += f"\n**Antag Tokens**: {player['antag_tokens']}"
 
-        embed.add_field(name="__Player Statistics__:", value=player_stats, inline=False)
-        embed.add_field(name="__Connection Information:__", value=f"**First Seen**: {player['first']}\n**Last Seen**: {player['last']}\n**Account Join Date**: {player['join']}\n**Number of Connections**: {player['num_connections']}", inline=False)
-        await message.edit(content=None, embed=embed)
+            embed.add_field(name="__Player Statistics__:", value=player_stats, inline=False)
+            embed.add_field(name="__Connection Information:__", value=f"**First Seen**: {player['first']}\n**Last Seen**: {player['last']}\n**Account Join Date**: {player['join']}\n**Number of Connections**: {player['num_connections']}", inline=False)
+            await message.edit(content=None, embed=embed)
+        except (mysql.connector.Error, ValueError)  as err:
+            embed=discord.Embed(title=f"Error looking up player", description=f"{format(err)}", color=0xff0000)
+            await message.edit(content=None,embed=embed)
+            return
+        
+        except ModuleNotFoundError:
+            await message.edit(content="`mysql-connector` requirement not found! Please install this requirement using `pip install mysql-connector`.")
+            return  
 
     @checks.mod_or_permissions(administrator=True)
     @commands.command()
@@ -359,33 +374,32 @@ class GetNotes(BaseCog):
                     await message.edit(content="That doesn't look like an IP, CID, or CKEY. Please check your entry and try again!")
                     return
 
-            if player:
+            if player is None:
+                raise ValueError
                 
-                embed=discord.Embed(color=await ctx.embed_color())
-                embed.set_author(name=f"Player info for {str(player['ckey']).title()}")
+            embed=discord.Embed(color=await ctx.embed_color())
+            embed.set_author(name=f"Player info for {str(player['ckey']).title()}")
 
-                player_stats = f"**Playtime**: {player['total_time']}h ({player['living_time']}h/{player['ghost_time']}h)"
-                if 'metacoins' in player.keys():
-                    player_stats += f"\n**{await self.config.guild(ctx.guild).currency_name()}**: {player['metacoins']}"
-                if 'antag_tokens' in player.keys():
-                    player_stats += f"\n**Antag Tokens**: {player['antag_tokens']}"
+            player_stats = f"**Playtime**: {player['total_time']}h ({player['living_time']}h/{player['ghost_time']}h)"
+            if 'metacoins' in player.keys():
+                player_stats += f"\n**{await self.config.guild(ctx.guild).currency_name()}**: {player['metacoins']}"
+            if 'antag_tokens' in player.keys():
+                player_stats += f"\n**Antag Tokens**: {player['antag_tokens']}"
 
-                embed.add_field(name="__Identity:__",value=f"**CKEY**: {player['ckey']}\n**CID**: {player['cid']}\n**IP**: {player['ip']}\n**Account Join Date**: {player['join']}", inline=False)                    
-                embed.add_field(name="__Player Statistics__:", value=player_stats, inline=False)
-                embed.add_field(name="__Connection Information:__", value=f"**First Seen**: {player['first']}\n**Last Seen**: {player['last']}\n**Number of Connections**: {player['num_connections']}", inline=False)
-                embed.add_field(name="__Bans/Notes:__", value=f"**Number of Notes**: {player['notes']}\n**Number of Bans**: {player['num_bans']}\n**Last Ban**: {player['latest_ban']}", inline=False)
+            embed.add_field(name="__Identity:__",value=f"**CKEY**: {player['ckey']}\n**CID**: {player['cid']}\n**IP**: {player['ip']}\n**Account Join Date**: {player['join']}", inline=False)                    
+            embed.add_field(name="__Player Statistics__:", value=player_stats, inline=False)
+            embed.add_field(name="__Connection Information:__", value=f"**First Seen**: {player['first']}\n**Last Seen**: {player['last']}\n**Number of Connections**: {player['num_connections']}", inline=False)
+            embed.add_field(name="__Bans/Notes:__", value=f"**Number of Notes**: {player['notes']}\n**Number of Bans**: {player['num_bans']}\n**Last Ban**: {player['latest_ban']}", inline=False)
 
-                await message.edit(content=None, embed=embed)
+            await message.edit(content=None, embed=embed)
 
-                # After 5-minutes redact the player's CID and IP.
-                await asyncio.sleep(300)
-                embed.set_field_at(0, name="__Identity:__",value=f"**CKEY**: {player['ckey']}\n**CID**: `[Redacted]`\n**IP**: `[Redacted]`\n**Account Join Date**: {player['join']}", inline=False)                    
+            # After 5-minutes redact the player's CID and IP.
+            await asyncio.sleep(300)
+            embed.set_field_at(0, name="__Identity:__",value=f"**CKEY**: {player['ckey']}\n**CID**: `[Redacted]`\n**IP**: `[Redacted]`\n**Account Join Date**: {player['join']}", inline=False)                    
 
-                await message.edit(content=None, embed=embed)
-            else:
-                await message.edit(content="No results found.")
+            await message.edit(content=None, embed=embed)
 
-        except mysql.connector.Error as err:
+        except (mysql.connector.Error, ValueError) as err:
             embed=discord.Embed(title=f"Error looking up player", description=f"{format(err)}", color=0xff0000)
             await message.edit(content=None,embed=embed)
             return
