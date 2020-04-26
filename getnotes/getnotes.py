@@ -341,14 +341,18 @@ class GetNotes(BaseCog):
             embed.add_field(name="__Player Statistics__:", value=player_stats, inline=False)
             embed.add_field(name="__Connection Information:__", value=f"**First Seen**: {player['first']}\n**Last Seen**: {player['last']}\n**Account Join Date**: {player['join']}\n**Number of Connections**: {player['num_connections']}", inline=False)
             await message.edit(content=None, embed=embed)
-        except (mysql.connector.Error, ValueError)  as err:
+
+        except ValueError:
+            return await message.edit(content="No results found.")
+            
+
+        except mysql.connector.Error  as err:
             embed=discord.Embed(title=f"Error looking up player", description=f"{format(err)}", color=0xff0000)
-            await message.edit(content=None,embed=embed)
-            return
+            return await message.edit(content=None,embed=embed)
+            
         
         except ModuleNotFoundError:
-            await message.edit(content="`mysql-connector` requirement not found! Please install this requirement using `pip install mysql-connector`.")
-            return  
+            return await message.edit(content="`mysql-connector` requirement not found! Please install this requirement using `pip install mysql-connector`.")
 
     @checks.mod_or_permissions(administrator=True)
     @commands.command()
@@ -371,8 +375,8 @@ class GetNotes(BaseCog):
                     player = re.sub('[^A-Za-z0-9]+', '', player) # The database does not support ckeys with spaces or special characters
                     player = await self.player_search(ctx, ckey=player)
                 else:
-                    await message.edit(content="That doesn't look like an IP, CID, or CKEY. Please check your entry and try again!")
-                    return
+                    return await message.edit(content="That doesn't look like an IP, CID, or CKEY. Please check your entry and try again!")
+                    
 
             if player is None:
                 raise ValueError
@@ -399,14 +403,18 @@ class GetNotes(BaseCog):
 
             await message.edit(content=None, embed=embed)
 
+        except ValueError:
+            return await message.edit(content="No results found.")
+            
+
         except (mysql.connector.Error, ValueError) as err:
             embed=discord.Embed(title=f"Error looking up player", description=f"{format(err)}", color=0xff0000)
-            await message.edit(content=None,embed=embed)
-            return
+            return await message.edit(content=None,embed=embed)
+            
         
         except ModuleNotFoundError:
-            await message.edit(content="`mysql-connector` requirement not found! Please install this requirement using `pip install mysql-connector`.")
-            return          
+            return await message.edit(content="`mysql-connector` requirement not found! Please install this requirement using `pip install mysql-connector`.")
+                      
         
 
     async def query_database(self, ctx, query: str):
