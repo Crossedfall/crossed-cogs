@@ -14,6 +14,9 @@ from redbot.core import commands, checks, Config
 from redbot.core.utils.chat_formatting import pagify, box
 from redbot.core.utils.menus import menu, DEFAULT_CONTROLS
 
+#Util Imports
+from util import key_to_ckey
+
 __version__ = "1.1.0"
 __author__ = "Crossedfall"
 
@@ -256,6 +259,11 @@ class GetNotes(BaseCog):
             query = await self.query_database(ctx, query)
             results['num_connections'] = query[0]['COUNT(*)']
 
+            #Obtain the number of total deaths
+            query = f"SELECT COUNT(*) FROM {prefix}death WHERE byondkey='{results['ckey']}'"
+            query = await self.query_database(ctx, query)
+            results['num_deaths'] = query[0]['COUNT(*)']
+
             #Obtain role time statistics
             query = f"SELECT job, minutes FROM {prefix}role_time WHERE ckey='{ckey}' AND (job='Ghost' OR job='Living')"
             try:
@@ -314,13 +322,13 @@ class GetNotes(BaseCog):
 
         except:
             raise
-        
+
     @commands.command(aliases=['ckey'])
     async def playerinfo(self, ctx, *, player: str):
         """
         Lookup a player's stats based on their ckey
         """
-        player = re.sub('[^A-Za-z0-9]+', '', player) # The database does not support ckeys with spaces or special characters
+        player = key_to_ckey(player)
 
         try:
             message = await ctx.send("Looking up player....")
@@ -372,7 +380,7 @@ class GetNotes(BaseCog):
                 elif type(player) is int:
                     player = await self.player_search(ctx, cid=player)
                 elif type(player) is str:
-                    player = re.sub('[^A-Za-z0-9]+', '', player) # The database does not support ckeys with spaces or special characters
+                    player = key_to_ckey(player)
                     player = await self.player_search(ctx, ckey=player)
                 else:
                     return await message.edit(content="That doesn't look like an IP, CID, or CKEY. Please check your entry and try again!")
@@ -414,8 +422,65 @@ class GetNotes(BaseCog):
         
         except ModuleNotFoundError:
             return await message.edit(content="`mysql-connector` requirement not found! Please install this requirement using `pip install mysql-connector`.")
-                      
+
+
+    async def dph(self, ctx) -> dict: # Deaths per hour
+        """
+        Calculate a player's deaths per hour
+        """
+        player = key_to_ckey(player)
+
+        try:
+            message = await ctx.send("Calculating DPH....")
+            async with ctx.typing():
+                player = await self.player_search(ctx, ckey=player)
+            
+            if player is None:
+                raise ValueError
+
+            dph = round(player['num_deaths'] / (player['living_time'] / 60), 2)
+
+            await message.edit(content=f"DPH of **{player}**: {dph}", embed=embed)
+
+        except ValueError:
+            return await message.edit(content="Player not found.")
+            
+        except mysql.connector.Error  as err:
+            embed=discord.Embed(title=f"Error finding player DPH", description=f"{format(err)}", color=0xff0000)
+            return await message.edit(content=None,embed=embed)
         
+        except ModuleNotFoundError:
+            return await message.edit(content="`mysql-connector` requirement not found! Please install this requirement using `pip install mysql-connector`.")
+
+
+    async def nph(self, ctx) -> dict: # Notes per hour
+        """
+        Calculate a player's notes per hour
+        """
+        player = key_to_ckey(player)
+
+        try:
+            message = await ctx.send("Calculating NPH....")
+            async with ctx.typing():
+                player = await self.player_search(ctx, ckey=player)
+            
+            if player is None:
+                raise ValueError
+
+            nph = round(player['notes'] / (player['living_time'] / 60), 2)
+
+            await message.edit(content=f"NPH of **{player}**: {nph}", embed=embed)
+
+        except ValueError:
+            return await message.edit(content="Player not found.")
+            
+        except mysql.connector.Error  as err:
+            embed=discord.Embed(title=f"Error finding player NPH", description=f"{format(err)}", color=0xff0000)
+            return await message.edit(content=None,embed=embed)
+        
+        except ModuleNotFoundError:
+            return await message.edit(content="`mysql-connector` requirement not found! Please install this requirement using `pip install mysql-connector`.")
+
 
     async def query_database(self, ctx, query: str):
         # Database options loaded from the config
