@@ -76,7 +76,7 @@ class GetNotes(BaseCog):
     
     @setnotes.command(aliases=['name', 'user'])
     @checks.is_owner()
-    async def username(self,ctx,user: str):
+    async def username(self, ctx, user: str):
         """
         Sets the user that will be used with the MySQL database. Defaults to SS13
 
@@ -90,7 +90,7 @@ class GetNotes(BaseCog):
     
     @setnotes.command()
     @checks.is_owner()
-    async def password(self,ctx,passwd: str):
+    async def password(self, ctx, passwd: str):
         """
         Sets the password for connecting to the database
 
@@ -108,7 +108,7 @@ class GetNotes(BaseCog):
 
     @setnotes.command(aliases=["db"])
     @checks.is_owner()
-    async def database(self,ctx,db: str):
+    async def database(self, ctx, db: str):
         """
         Sets the database to login to, defaults to feedback
         """
@@ -156,7 +156,7 @@ class GetNotes(BaseCog):
             await ctx.send("There was a problem setting your currency's name")
     
     @setnotes.command()
-    async def current(self,ctx):
+    async def current(self, ctx):
         """
         Gets the current settings for the notes database
         """
@@ -174,7 +174,7 @@ class GetNotes(BaseCog):
 
     @checks.mod_or_permissions(administrator=True)
     @commands.command()
-    async def notes(self, ctx, *,player: str):
+    async def notes(self, ctx, *, player: str):
         """
         Gets the notes for a specific player
         """
@@ -316,7 +316,7 @@ class GetNotes(BaseCog):
             raise
         
     @commands.command(aliases=['ckey'])
-    async def playerinfo(self, ctx, *,player: str):
+    async def playerinfo(self, ctx, *, player: str):
         """
         Lookup a player's stats based on their ckey
         """
@@ -356,7 +356,7 @@ class GetNotes(BaseCog):
 
     @checks.mod_or_permissions(administrator=True)
     @commands.command()
-    async def findplayer(self, ctx, *,player: Union[ipaddress.IPv4Address, int, str] = None):
+    async def findplayer(self, ctx, *, player: Union[ipaddress.IPv4Address, int, str] = None):
         """
         Obtains information about a specific player.
 
