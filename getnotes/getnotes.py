@@ -331,7 +331,7 @@ class GetNotes(BaseCog):
 
             if results['living_time'] > 0:
                 results['notes_per_hour'] = round(results['notes'] / (results['total_time']), 2)
-                results['deaths_per_hour'] = round(results['num_deaths'] / (results['living_time']), 2)
+                results['deaths_per_hour'] = round(results['num_deaths'] / (results['living_time']), 3)
             else:
                 results['notes_per_hour'] = 0
                 results['deaths_per_hour'] = 0
