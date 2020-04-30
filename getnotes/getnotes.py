@@ -14,6 +14,9 @@ from redbot.core import commands, checks, Config
 from redbot.core.utils.chat_formatting import pagify, box
 from redbot.core.utils.menus import menu, DEFAULT_CONTROLS
 
+#Util Imports
+from .util import key_to_ckey
+
 __version__ = "1.1.0"
 __author__ = "Crossedfall"
 
@@ -38,6 +41,7 @@ class GetNotes(BaseCog):
 
         self.config.register_guild(**default_guild)
     
+
     @commands.guild_only()
     @commands.group()
     @checks.admin_or_permissions(administrator=True)
@@ -47,6 +51,7 @@ class GetNotes(BaseCog):
         """
         pass
     
+
     @setnotes.command()
     @checks.is_owner()
     async def host(self, ctx, db_host: str):
@@ -59,6 +64,7 @@ class GetNotes(BaseCog):
         except (ValueError, KeyError, AttributeError):
             await ctx.send("There was an error setting the database's ip/hostname. Please check your entry and try again!")
     
+
     @setnotes.command()
     @checks.is_owner()
     async def port(self, ctx, db_port: int):
@@ -74,9 +80,10 @@ class GetNotes(BaseCog):
         except (ValueError, KeyError, AttributeError):
             await ctx.send("There was a problem setting your port. Please check to ensure you're attempting to use a port from 1024 to 65535") 
     
+
     @setnotes.command(aliases=['name', 'user'])
     @checks.is_owner()
-    async def username(self,ctx,user: str):
+    async def username(self, ctx, user: str):
         """
         Sets the user that will be used with the MySQL database. Defaults to SS13
 
@@ -88,9 +95,10 @@ class GetNotes(BaseCog):
         except (ValueError, KeyError, AttributeError):
             await ctx.send("There was a problem setting the username for your database.")
     
+
     @setnotes.command()
     @checks.is_owner()
-    async def password(self,ctx,passwd: str):
+    async def password(self, ctx, passwd: str):
         """
         Sets the password for connecting to the database
 
@@ -106,9 +114,10 @@ class GetNotes(BaseCog):
         except (ValueError, KeyError, AttributeError):
             await ctx.send("There was a problem setting the password for your database.")
 
+
     @setnotes.command(aliases=["db"])
     @checks.is_owner()
-    async def database(self,ctx,db: str):
+    async def database(self, ctx, db: str):
         """
         Sets the database to login to, defaults to feedback
         """
@@ -118,6 +127,7 @@ class GetNotes(BaseCog):
         except (ValueError, KeyError, AttributeError):
             await ctx.send ("There was a problem setting your notes database.")
     
+
     @setnotes.command()
     @checks.is_owner()
     async def prefix(self, ctx, prefix: str = None):
@@ -137,6 +147,7 @@ class GetNotes(BaseCog):
         except (ValueError, KeyError, AttributeError):
             await ctx.send("There was a problem setting your database prefix")
     
+
     @setnotes.command()
     @checks.is_owner()
     async def currencyname(self, ctx, name: str = None):
@@ -155,8 +166,9 @@ class GetNotes(BaseCog):
         except (ValueError, KeyError, AttributeError):
             await ctx.send("There was a problem setting your currency's name")
     
+
     @setnotes.command()
-    async def current(self,ctx):
+    async def current(self, ctx):
         """
         Gets the current settings for the notes database
         """
@@ -172,23 +184,24 @@ class GetNotes(BaseCog):
                     embed.add_field(name=f"{k}:",value="`redacted`",inline=False)
         await ctx.send(embed=embed)
 
+
     @checks.mod_or_permissions(administrator=True)
     @commands.command()
-    async def notes(self, ctx, *,player: str):
+    async def notes(self, ctx, *, ckey: str):
         """
         Gets the notes for a specific player
         """
-        player = re.sub('[^A-Za-z0-9]+', '', player) # The database does not support ckeys with spaces or special characters
+        ckey = key_to_ckey(ckey)
             
         prefix = await self.config.guild(ctx.guild).mysql_prefix()
 
-        query = f"SELECT timestamp, adminckey, text, type, deleted FROM {prefix}messages WHERE targetckey='{player.lower()}' ORDER BY timestamp DESC"
+        query = f"SELECT timestamp, adminckey, text, type, deleted FROM {prefix}messages WHERE targetckey='{ckey.lower()}' ORDER BY timestamp DESC"
         message = await ctx.send("Getting player notes...")
 
         try:
             rows = await self.query_database(ctx, query)
             if not rows:
-                embed=discord.Embed(description=f"No notes found for: {str(player).title()}", color=0xf1d592)
+                embed=discord.Embed(description=f"No notes found for: {str(ckey).title()}", color=0xf1d592)
                 return await message.edit(content=None,embed=embed)
             # Parse the data into individual fields within an embeded message in Discord for ease of viewing
             notes = ""
@@ -206,7 +219,7 @@ class GetNotes(BaseCog):
             max_i = len(temp_embeds)
             i = 1
             for embed in temp_embeds:
-                embed.set_author(name=f"Notes for {str(player).title()} | Total notes: {total}")
+                embed.set_author(name=f"Notes for {str(ckey).title()} | Total notes: {total}")
                 embed.set_footer(text=f"Page {i}/{max_i} | All times are server time")
                 embeds.append(embed)
                 i += 1
@@ -214,11 +227,12 @@ class GetNotes(BaseCog):
             await menu(ctx, embeds, DEFAULT_CONTROLS)
         
         except mysql.connector.Error as err:
-            embed=discord.Embed(title=f"Error looking up notes for: {player}", description=f"{format(err)}", color=0xff0000)
+            embed=discord.Embed(title=f"Error looking up notes for: {ckey}", description=f"{format(err)}", color=0xff0000)
             await message.edit(content=None,embed=embed)
         
         except ModuleNotFoundError:
             await message.edit(content="`mysql-connector` requirement not found! Please install this requirement using `pip install mysql-connector`.")
+    
     
     async def player_search(self, ctx, ip = None, ckey = None, cid = None) -> dict:
         """
@@ -255,6 +269,11 @@ class GetNotes(BaseCog):
             query = f"SELECT COUNT(*) FROM {prefix}connection_log WHERE ckey='{results['ckey']}'"
             query = await self.query_database(ctx, query)
             results['num_connections'] = query[0]['COUNT(*)']
+
+            #Obtain the number of total deaths
+            query = f"SELECT COUNT(*) FROM {prefix}death WHERE byondkey='{results['ckey']}'"
+            query = await self.query_database(ctx, query)
+            results['num_deaths'] = query[0]['COUNT(*)']
 
             #Obtain role time statistics
             query = f"SELECT job, minutes FROM {prefix}role_time WHERE ckey='{ckey}' AND (job='Ghost' OR job='Living')"
@@ -310,29 +329,37 @@ class GetNotes(BaseCog):
             query = await self.query_database(ctx, query)
             results['notes'] = query[0]['COUNT(*)']
 
+            if results['living_time'] > 0:
+                results['notes_per_hour'] = round(results['notes'] / (results['total_time']), 3)
+                results['deaths_per_hour'] = round(results['num_deaths'] / (results['living_time']), 2)
+            else:
+                results['notes_per_hour'] = 0
+                results['deaths_per_hour'] = 0
+
             return results
 
         except:
             raise
-        
+
+
     @commands.command(aliases=['ckey'])
-    async def playerinfo(self, ctx, *,player: str):
+    async def playerinfo(self, ctx, *, ckey: str):
         """
         Lookup a player's stats based on their ckey
         """
-        player = re.sub('[^A-Za-z0-9]+', '', player) # The database does not support ckeys with spaces or special characters
+        ckey = key_to_ckey(ckey)
 
         try:
             message = await ctx.send("Looking up player....")
             async with ctx.typing():
                 embed=discord.Embed(color=await ctx.embed_color())
-                embed.set_author(name=f"Player info for {str(player).title()}")
-                player = await self.player_search(ctx, ckey=player)
+                embed.set_author(name=f"Player info for {str(ckey).title()}")
+                player = await self.player_search(ctx, ckey=ckey)
             
             if player is None:
                 raise ValueError
-                
-            player_stats = f"**Playtime**: {player['total_time']}h ({player['living_time']}h/{player['ghost_time']}h)"
+            
+            player_stats = f"**Playtime**: {player['total_time']}h ({player['living_time']}h/{player['ghost_time']}h)\n**Deaths per Hour**: {player['deaths_per_hour']}"
             if 'metacoins' in player.keys():
                 player_stats += f"\n**{await self.config.guild(ctx.guild).currency_name()}**: {player['metacoins']}"
             if 'antag_tokens' in player.keys():
@@ -344,19 +371,18 @@ class GetNotes(BaseCog):
 
         except ValueError:
             return await message.edit(content="No results found.")
-            
-
+        
         except mysql.connector.Error  as err:
             embed=discord.Embed(title=f"Error looking up player", description=f"{format(err)}", color=0xff0000)
             return await message.edit(content=None,embed=embed)
             
-        
         except ModuleNotFoundError:
             return await message.edit(content="`mysql-connector` requirement not found! Please install this requirement using `pip install mysql-connector`.")
 
+
     @checks.mod_or_permissions(administrator=True)
     @commands.command()
-    async def findplayer(self, ctx, *,player: Union[ipaddress.IPv4Address, int, str] = None):
+    async def findplayer(self, ctx, *, identifier: Union[ipaddress.IPv4Address, int, str] = None):
         """
         Obtains information about a specific player.
 
@@ -367,33 +393,33 @@ class GetNotes(BaseCog):
             message = await ctx.send("Looking up player....")
             async with ctx.typing():
 
-                if type(player) is ipaddress.IPv4Address:
-                    player = await self.player_search(ctx, ip=player)
-                elif type(player) is int:
-                    player = await self.player_search(ctx, cid=player)
-                elif type(player) is str:
-                    player = re.sub('[^A-Za-z0-9]+', '', player) # The database does not support ckeys with spaces or special characters
-                    player = await self.player_search(ctx, ckey=player)
+                if type(identifier) is ipaddress.IPv4Address:
+                    player = await self.player_search(ctx, ip=identifier)
+                elif type(identifier) is int:
+                    player = await self.player_search(ctx, cid=identifier)
+                elif type(identifier) is str:
+                    identifier = key_to_ckey(identifier)
+                    player = await self.player_search(ctx, ckey=identifier)
                 else:
                     return await message.edit(content="That doesn't look like an IP, CID, or CKEY. Please check your entry and try again!")
                     
-
             if player is None:
                 raise ValueError
                 
             embed=discord.Embed(color=await ctx.embed_color())
             embed.set_author(name=f"Player info for {str(player['ckey']).title()}")
 
-            player_stats = f"**Playtime**: {player['total_time']}h ({player['living_time']}h/{player['ghost_time']}h)"
+            player_stats = f"**Playtime**: {player['total_time']}h ({player['living_time']}h/{player['ghost_time']}h)\n**Deaths per Hour**: {player['deaths_per_hour']}"
             if 'metacoins' in player.keys():
                 player_stats += f"\n**{await self.config.guild(ctx.guild).currency_name()}**: {player['metacoins']}"
             if 'antag_tokens' in player.keys():
                 player_stats += f"\n**Antag Tokens**: {player['antag_tokens']}"
-
+            
             embed.add_field(name="__Identity:__",value=f"**CKEY**: {player['ckey']}\n**CID**: {player['cid']}\n**IP**: {player['ip']}\n**Account Join Date**: {player['join']}", inline=False)                    
             embed.add_field(name="__Player Statistics__:", value=player_stats, inline=False)
             embed.add_field(name="__Connection Information:__", value=f"**First Seen**: {player['first']}\n**Last Seen**: {player['last']}\n**Number of Connections**: {player['num_connections']}", inline=False)
-            embed.add_field(name="__Bans/Notes:__", value=f"**Number of Notes**: {player['notes']}\n**Number of Bans**: {player['num_bans']}\n**Last Ban**: {player['latest_ban']}", inline=False)
+    
+            embed.add_field(name="__Bans/Notes:__", value=f"**Number of Notes**: {player['notes']}\n**Number of Bans**: {player['num_bans']}\n**Last Ban**: {player['latest_ban']}\n**Notes per Hour**: {player['notes_per_hour']}", inline=False)
 
             await message.edit(content=None, embed=embed)
 
@@ -405,17 +431,14 @@ class GetNotes(BaseCog):
 
         except ValueError:
             return await message.edit(content="No results found.")
-            
-
+        
         except (mysql.connector.Error, ValueError) as err:
             embed=discord.Embed(title=f"Error looking up player", description=f"{format(err)}", color=0xff0000)
             return await message.edit(content=None,embed=embed)
             
-        
         except ModuleNotFoundError:
             return await message.edit(content="`mysql-connector` requirement not found! Please install this requirement using `pip install mysql-connector`.")
-                      
-        
+
 
     async def query_database(self, ctx, query: str):
         # Database options loaded from the config
