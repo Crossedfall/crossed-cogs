@@ -330,7 +330,7 @@ class GetNotes(BaseCog):
             results['notes'] = query[0]['COUNT(*)']
 
             if results['living_time'] > 0:
-                results['notes_per_hour'] = round(results['notes'] / (results['living_time'] / 60), 2)
+                results['notes_per_hour'] = round(results['notes'] / (results['total_time'] / 60), 2)
                 results['deaths_per_hour'] = round(results['num_deaths'] / (results['living_time'] / 60), 2)
             else:
                 results['notes_per_hour'] = 0
