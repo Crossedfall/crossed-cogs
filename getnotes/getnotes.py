@@ -409,7 +409,7 @@ class GetNotes(BaseCog):
             embed=discord.Embed(color=await ctx.embed_color())
             embed.set_author(name=f"Player info for {str(player['ckey']).title()}")
 
-            player_stats = f"**Playtime**: {player['total_time']}h ({player['living_time']}h/{player['ghost_time']}h)\n**Deaths per Hour**: {results['deaths_per_hour']}"
+            player_stats = f"**Playtime**: {player['total_time']}h ({player['living_time']}h/{player['ghost_time']}h)\n**Deaths per Hour**: {player['deaths_per_hour']}"
             if 'metacoins' in player.keys():
                 player_stats += f"\n**{await self.config.guild(ctx.guild).currency_name()}**: {player['metacoins']}"
             if 'antag_tokens' in player.keys():
@@ -419,7 +419,7 @@ class GetNotes(BaseCog):
             embed.add_field(name="__Player Statistics__:", value=player_stats, inline=False)
             embed.add_field(name="__Connection Information:__", value=f"**First Seen**: {player['first']}\n**Last Seen**: {player['last']}\n**Number of Connections**: {player['num_connections']}", inline=False)
     
-            embed.add_field(name="__Bans/Notes:__", value=f"**Number of Notes**: {player['notes']}\n**Number of Bans**: {player['num_bans']}\n**Last Ban**: {player['latest_ban']}\n**Notes per Hour**: {results['notes_per_hour']}", inline=False)
+            embed.add_field(name="__Bans/Notes:__", value=f"**Number of Notes**: {player['notes']}\n**Number of Bans**: {player['num_bans']}\n**Last Ban**: {player['latest_ban']}\n**Notes per Hour**: {player['notes_per_hour']}", inline=False)
 
             await message.edit(content=None, embed=embed)
 
