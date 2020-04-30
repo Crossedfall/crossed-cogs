@@ -359,7 +359,7 @@ class GetNotes(BaseCog):
             if player is None:
                 raise ValueError
             
-            player_stats = f"**Playtime**: {player['total_time']}h ({player['living_time']}h/{player['ghost_time']}h)\n**Deaths per Hour**: {results['deaths_per_hour']}"
+            player_stats = f"**Playtime**: {player['total_time']}h ({player['living_time']}h/{player['ghost_time']}h)\n**Deaths per Hour**: {player['deaths_per_hour']}"
             if 'metacoins' in player.keys():
                 player_stats += f"\n**{await self.config.guild(ctx.guild).currency_name()}**: {player['metacoins']}"
             if 'antag_tokens' in player.keys():
