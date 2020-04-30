@@ -329,6 +329,13 @@ class GetNotes(BaseCog):
             query = await self.query_database(ctx, query)
             results['notes'] = query[0]['COUNT(*)']
 
+            if results['living_time'] > 0:
+                results['notes_per_hour'] = round(results['notes'] / (results['living_time'] / 60), 2)
+                results['deaths_per_hour'] = round(results['num_deaths'] / (results['living_time'] / 60), 2)
+            else:
+                results['notes_per_hour'] = 0
+                results['deaths_per_hour'] = 0
+
             return results
 
         except:
@@ -352,8 +359,7 @@ class GetNotes(BaseCog):
             if player is None:
                 raise ValueError
             
-            dph = round(player['num_deaths'] / (player['living_time'] / 60), 2)
-            player_stats = f"**Playtime**: {player['total_time']}h ({player['living_time']}h/{player['ghost_time']}h)\n**Deaths per Hour**: {dph}"
+            player_stats = f"**Playtime**: {player['total_time']}h ({player['living_time']}h/{player['ghost_time']}h)\n**Deaths per Hour**: {results['deaths_per_hour']}"
             if 'metacoins' in player.keys():
                 player_stats += f"\n**{await self.config.guild(ctx.guild).currency_name()}**: {player['metacoins']}"
             if 'antag_tokens' in player.keys():
@@ -403,8 +409,7 @@ class GetNotes(BaseCog):
             embed=discord.Embed(color=await ctx.embed_color())
             embed.set_author(name=f"Player info for {str(player['ckey']).title()}")
 
-            dph = round(player['num_deaths'] / (player['living_time'] / 60), 2)
-            player_stats = f"**Playtime**: {player['total_time']}h ({player['living_time']}h/{player['ghost_time']}h)\n**Deaths per Hour**: {dph}"
+            player_stats = f"**Playtime**: {player['total_time']}h ({player['living_time']}h/{player['ghost_time']}h)\n**Deaths per Hour**: {results['deaths_per_hour']}"
             if 'metacoins' in player.keys():
                 player_stats += f"\n**{await self.config.guild(ctx.guild).currency_name()}**: {player['metacoins']}"
             if 'antag_tokens' in player.keys():
@@ -413,9 +418,8 @@ class GetNotes(BaseCog):
             embed.add_field(name="__Identity:__",value=f"**CKEY**: {player['ckey']}\n**CID**: {player['cid']}\n**IP**: {player['ip']}\n**Account Join Date**: {player['join']}", inline=False)                    
             embed.add_field(name="__Player Statistics__:", value=player_stats, inline=False)
             embed.add_field(name="__Connection Information:__", value=f"**First Seen**: {player['first']}\n**Last Seen**: {player['last']}\n**Number of Connections**: {player['num_connections']}", inline=False)
-           
-            nph = round(player['notes'] / (player['living_time'] / 60), 2)
-            embed.add_field(name="__Bans/Notes:__", value=f"**Number of Notes**: {player['notes']}\n**Number of Bans**: {player['num_bans']}\n**Last Ban**: {player['latest_ban']}\n**Notes per Hour**: {nph}", inline=False)
+    
+            embed.add_field(name="__Bans/Notes:__", value=f"**Number of Notes**: {player['notes']}\n**Number of Bans**: {player['num_bans']}\n**Last Ban**: {player['latest_ban']}\n**Notes per Hour**: {results['notes_per_hour']}", inline=False)
 
             await message.edit(content=None, embed=embed)
 
