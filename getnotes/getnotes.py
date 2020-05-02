@@ -465,46 +465,54 @@ class GetNotes(BaseCog):
             embed=discord.Embed(title=f"Error looking up alts", description=f"{format(err)}", color=0xff0000)
             await ctx.send(embed=embed)
             return await message.delete() #^
+        
+        except GeneratorExit:
+            embed=discord.Embed(title=f"Error looking up alts", description="Please check your entry and try again!", color=0xff0000)
+            await ctx.send(embed=embed)
+            return await message.delete() #^
 
 
     async def get_alts(self, ctx, target:str) -> list:
         """Performs a comprehensive check of the database for possible alt accounts"""
         #Credit for the original code goes to Qwerty (https://github.com/qwertyquerty)
+        try:
+            prefix = await self.config.guild(ctx.guild).mysql_prefix()
+            caught_alts = []
+            investigated = []
+            to_investigate = [(target, "ckey")]
 
-        prefix = await self.config.guild(ctx.guild).mysql_prefix()
-        caught_alts = []
-        investigated = []
-        to_investigate = [(target, "ckey")]
+            while len(to_investigate) > 0:
+                investigating = to_investigate.pop(len(to_investigate) - 1)
+                log.debug(f"Investigating: {investigating} :: Number to check: {len(to_investigate)}")
 
-        while len(to_investigate) > 0:
-            investigating = to_investigate.pop(len(to_investigate) - 1)
-            log.debug(f"Investigating: {investigating} :: Number to check: {len(to_investigate)}")
+                linked = []
 
-            linked = []
+                if investigating[1] == "ckey":
+                    linked = await self.query_database(ctx, f"SELECT ckey, ip, computerid FROM {prefix}connection_log WHERE ckey='{investigating[0]}'")
+                if investigating[1] == "computerid":
+                    linked = await self.query_database(ctx, f"SELECT ckey, ip, computerid FROM {prefix}connection_log WHERE computerid='{investigating[0]}'")
+                if investigating[1] == "ip":
+                    linked = await self.query_database(ctx, f"SELECT ckey, ip, computerid FROM {prefix}connection_log WHERE ip='{investigating[0]}'")
+                
+                investigated.append(investigating)
 
-            if investigating[1] == "ckey":
-                linked = await self.query_database(ctx, f"SELECT ckey, ip, computerid FROM {prefix}connection_log WHERE ckey='{investigating[0]}'")
-            if investigating[1] == "computerid":
-                linked = await self.query_database(ctx, f"SELECT ckey, ip, computerid FROM {prefix}connection_log WHERE computerid='{investigating[0]}'")
-            if investigating[1] == "ip":
-                linked = await self.query_database(ctx, f"SELECT ckey, ip, computerid FROM {prefix}connection_log WHERE ip='{investigating[0]}'")
-            
-            investigated.append(investigating)
+                for link in linked:
+                    if (link['ckey'], "ckey") not in investigated and (link['ckey'], "ckey") not in to_investigate:
+                        to_investigate.append((link['ckey'], "ckey"))
 
-            for link in linked:
-                if (link['ckey'], "ckey") not in investigated and (link['ckey'], "ckey") not in to_investigate:
-                    to_investigate.append((link['ckey'], "ckey"))
+                        if link['ckey'] not in caught_alts:
+                            caught_alts.append(link['ckey'])
 
-                    if link['ckey'] not in caught_alts:
-                        caught_alts.append(link['ckey'])
+                    if (link['computerid'], "computerid") not in investigated and (link['computerid'], "computerid") not in to_investigate:
+                        to_investigate.append((link['computerid'], "computerid"))
 
-                if (link['computerid'], "computerid") not in investigated and (link['computerid'], "computerid") not in to_investigate:
-                    to_investigate.append((link['computerid'], "computerid"))
+                    if (link['ip'], "ip") not in investigated and (link['ip'], "ip") not in to_investigate:
+                        to_investigate.append((link['ip'], "ip"))
 
-                if (link['ip'], "ip") not in investigated and (link['ip'], "ip") not in to_investigate:
-                    to_investigate.append((link['ip'], "ip"))
+            return caught_alts
 
-        return caught_alts
+        except GeneratorExit:
+            raise
 
 
     async def query_database(self, ctx, query: str):
