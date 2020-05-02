@@ -456,7 +456,7 @@ class GetNotes(BaseCog):
             async with ctx.typing():
                 alts = await self.get_alts(ctx, ckey)
                 if len(alts) > 0:
-                    await ctx.send(f"Possible alts:\n> {humanize_list(alts)}")
+                    await ctx.send(f"Possible alts for {ckey}:\n> {humanize_list(alts)}")
                 else:
                     await ctx.send("No alts detected!")
                 await message.delete() #Deleting over editing since this command can take a while
