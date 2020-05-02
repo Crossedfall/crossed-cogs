@@ -4,7 +4,7 @@
     "name": "SS13 Notes Helper",
     "short": "Obtains player notes and posts them into discord on command!",
     "requirements": [
-        "mysql-connector-python>=8.0"
+        "aiomysql>=0.0.20"
     ],
     "description": "Pulls player notes from your database. TG Scheme required",
     "permissions" : ["Manage Messages", "Embed Links"],
