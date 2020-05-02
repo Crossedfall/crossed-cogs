@@ -7,7 +7,7 @@ These are utility cogs explicitly intended for SS13 servers leveraging off of th
 
 | Cog      | Description                                                  |
 | -------- | ------------------------------------------------------------ |
-| GetNotes | **Pulls player notes from an SS13 [/TG/](https://github.com/tgstation/tgstation) schemed database**<br /><br />`setnotes` - Configuration options for the notes cog<br />`notes` -  Lists all of the notes for a given CKEY<br />`findplayer` - Searches the database for a player using their CID, IP, or CKEY and outputs an overview of the user. **Note**: It is recommended to restrict this command to admin specific channels. The results will automatically redact the CID and IP after 5-minutes. <br /><br />*Requires: mysql-connector-python>=8.0* -- `pip install mysql-connector-python` |
+| GetNotes | **Pulls player notes from an SS13 [/TG/](https://github.com/tgstation/tgstation) schemed database**<br /><br />`setnotes` - Configuration options for the notes cog<br />`notes` -  Lists all of the notes for a given CKEY<br />`findplayer` - Searches the database for a player using their CID, IP, or CKEY and outputs an overview of the user. **Note**: It is recommended to restrict this command to admin specific channels. The results will automatically redact the CID and IP after 5-minutes. <br />`playerinfo` | `ckey` - Player friendly version of the `findplayer` command providing basic user info without providing sensitive information like the CID or IP.<br />`alts` - Searches for possible alt accounts by comparing entries in the `connection_log` table. **Note**: This command can take a long time to complete<br />*Requires: aiomysql>=0.0.20 -- `pip install aiomysql`* |
 | Status   | **Obtains the current status of a hosted SS13 round and pertinent admin pings (e.g. Ahelps, round ending events, custom pings)**<br /><br />`adminwho` - Lists the current admins on the server &ast;<br />`players` - Lists the current players on the server&ast;<br />`setstatus`  - Configuration options for the status cog<br />`status` - Displays current round information<br /><br />_&ast; Requires additional setup, see [Additional Functions](#additional-functions) for more information_ |
 
 ## Setup
@@ -26,9 +26,30 @@ _Any reference to [p] should be replaced with your prefix_
 
 ### GetNotes:
 
-In order to fully utilize the GetNotes cog you will need to have a fully configured player database for your SS13 server configured using the [/TG/ schema](https://github.com/tgstation/tgstation/blob/master/SQL/tgstation_schema.sql). 
+In order to fully utilize the GetNotes cog you will need to have a fully configured player database for your SS13 server configured using the [BeeStation schema](https://github.com/BeeStation/BeeStation-Hornet/blob/master/SQL/beestation_schema.sql). 
 
 Once you have a database configured, you will need to provide a user that the bot can use to query said database. It is **highly** recommended that you ensure this user only has `SELECT` privileges and is separate from the one your server is configured to use. 
+
+<details>
+    <summary>FindPlayer / PlayerInfo Screenshots</summary>
+	
+![non-redacted](https://i.imgur.com/qYw4oWo.png) ![redacted](https://i.imgur.com/ei8Gf8C.png) ![ckey](https://i.imgur.com/5OBgHjM.png)
+    
+</details>
+
+<details>
+	<summary>Notes Screenshot</summary>
+	
+![notes](https://i.imgur.com/u3gFh9f.png)
+
+</details>
+
+<details>
+	<summary>Alts Screenshot</summary>
+	
+![alts](https://i.imgur.com/Jb8avGb.png)
+
+</details>
 
 --
 
