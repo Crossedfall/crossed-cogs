@@ -1,9 +1,10 @@
 #Standard Imports
 import asyncio
-import mysql.connector
+import aiomysql
 import socket
 import ipaddress
 import re
+import logging
 from typing import Union
 
 #Discord Imports
@@ -11,15 +12,16 @@ import discord
 
 #Redbot Imports
 from redbot.core import commands, checks, Config
-from redbot.core.utils.chat_formatting import pagify, box
+from redbot.core.utils.chat_formatting import pagify, box, humanize_list
 from redbot.core.utils.menus import menu, DEFAULT_CONTROLS
 
 #Util Imports
 from .util import key_to_ckey
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 __author__ = "Crossedfall"
 
+log = logging.getLogger("red.SS13GetNotes")
 
 BaseCog = getattr(commands, "Cog", object)
 
@@ -40,6 +42,7 @@ class GetNotes(BaseCog):
         }
 
         self.config.register_guild(**default_guild)
+        self.loop = asyncio.get_event_loop()
     
 
     @commands.guild_only()
@@ -226,7 +229,7 @@ class GetNotes(BaseCog):
             await message.delete()
             await menu(ctx, embeds, DEFAULT_CONTROLS)
         
-        except mysql.connector.Error as err:
+        except aiomysql.Error as err:
             embed=discord.Embed(title=f"Error looking up notes for: {ckey}", description=f"{format(err)}", color=0xff0000)
             await message.edit(content=None,embed=embed)
         
@@ -279,7 +282,7 @@ class GetNotes(BaseCog):
             query = f"SELECT job, minutes FROM {prefix}role_time WHERE ckey='{ckey}' AND (job='Ghost' OR job='Living')"
             try:
                 query = await self.query_database(ctx, query)
-            except mysql.connector.Error:
+            except aiomysql.Error:
                 query = None
 
             if query:
@@ -305,14 +308,14 @@ class GetNotes(BaseCog):
             try:
                 query = await self.query_database(ctx, query)
                 results['metacoins'] = (query[0])['metacoins']
-            except mysql.connector.Error:
+            except aiomysql.Error:
                 pass
             
             query = f"SELECT antag_tokens FROM {prefix}player WHERE ckey='{results['ckey']}'"
             try:
                 query = await self.query_database(ctx, query)
                 results['antag_tokens'] = (query[0])['antag_tokens']
-            except mysql.connector.Error:
+            except aiomysql.Error:
                 pass
 
             #Obtain the number of bans and, if applicable, the last ban
@@ -329,6 +332,7 @@ class GetNotes(BaseCog):
             query = await self.query_database(ctx, query)
             results['notes'] = query[0]['COUNT(*)']
 
+            # Notes/Deaths per hour
             if results['living_time'] > 0:
                 results['notes_per_hour'] = round(results['notes'] / (results['total_time']), 3)
                 results['deaths_per_hour'] = round(results['num_deaths'] / (results['living_time']), 2)
@@ -372,7 +376,7 @@ class GetNotes(BaseCog):
         except ValueError:
             return await message.edit(content="No results found.")
         
-        except mysql.connector.Error  as err:
+        except aiomysql.Error  as err:
             embed=discord.Embed(title=f"Error looking up player", description=f"{format(err)}", color=0xff0000)
             return await message.edit(content=None,embed=embed)
             
@@ -432,12 +436,75 @@ class GetNotes(BaseCog):
         except ValueError:
             return await message.edit(content="No results found.")
         
-        except (mysql.connector.Error, ValueError) as err:
+        except (aiomysql.Error, ValueError) as err:
             embed=discord.Embed(title=f"Error looking up player", description=f"{format(err)}", color=0xff0000)
             return await message.edit(content=None,embed=embed)
             
         except ModuleNotFoundError:
             return await message.edit(content="`mysql-connector` requirement not found! Please install this requirement using `pip install mysql-connector`.")
+    
+    @checks.mod()
+    @commands.command()
+    async def alts(self, ctx, ckey:str):
+        """
+        Search for a list of possible alt accounts
+
+        This command can take a long time if there are a lot of alt accounts or if your connections table is very large!
+        """
+        try:
+            message = await ctx.send("Checking for alts...")
+            async with ctx.typing():
+                alts = await self.get_alts(ctx, ckey)
+                if len(alts) > 0:
+                    await ctx.send(f"Possible alts:\n> {humanize_list(alts)}")
+                else:
+                    await ctx.send("No alts detected!")
+                await message.delete() #Deleting over editing since this command can take a while
+
+        except aiomysql.Error  as err:
+            embed=discord.Embed(title=f"Error looking up alts", description=f"{format(err)}", color=0xff0000)
+            await ctx.send(embed=embed)
+            return await message.delete() #^
+
+
+    async def get_alts(self, ctx, target:str) -> list:
+        """Performs a comprehensive check of the database for possible alt accounts"""
+        #Credit for the original code goes to Qwerty (https://github.com/qwertyquerty)
+
+        prefix = await self.config.guild(ctx.guild).mysql_prefix()
+        caught_alts = []
+        investigated = []
+        to_investigate = [(target, "ckey")]
+
+        while len(to_investigate) > 0:
+            investigating = to_investigate.pop(len(to_investigate) - 1)
+            log.debug(f"Investigating: {investigating} :: Number to check: {len(to_investigate)}")
+
+            linked = []
+
+            if investigating[1] == "ckey":
+                linked = await self.query_database(ctx, f"SELECT ckey, ip, computerid FROM {prefix}connection_log WHERE ckey='{investigating[0]}'")
+            if investigating[1] == "computerid":
+                linked = await self.query_database(ctx, f"SELECT ckey, ip, computerid FROM {prefix}connection_log WHERE computerid='{investigating[0]}'")
+            if investigating[1] == "ip":
+                linked = await self.query_database(ctx, f"SELECT ckey, ip, computerid FROM {prefix}connection_log WHERE ip='{investigating[0]}'")
+            
+            investigated.append(investigating)
+
+            for link in linked:
+                if (link['ckey'], "ckey") not in investigated and (link['ckey'], "ckey") not in to_investigate:
+                    to_investigate.append((link['ckey'], "ckey"))
+
+                    if link['ckey'] not in caught_alts:
+                        caught_alts.append(link['ckey'])
+
+                if (link['computerid'], "computerid") not in investigated and (link['computerid'], "computerid") not in to_investigate:
+                    to_investigate.append((link['computerid'], "computerid"))
+
+                if (link['ip'], "ip") not in investigated and (link['ip'], "ip") not in to_investigate:
+                    to_investigate.append((link['ip'], "ip"))
+
+        return caught_alts
 
 
     async def query_database(self, ctx, query: str):
@@ -448,23 +515,21 @@ class GetNotes(BaseCog):
         db_user = await self.config.guild(ctx.guild).mysql_user()
         db_pass = await self.config.guild(ctx.guild).mysql_password()
 
-        cursor = None # Since the cursor/conn variables can't actually be closed if the connection isn't properly established we set a None type here
-        conn = None # ^
+        pool = None # Since the pool variables can't actually be closed if the connection isn't properly established we set a None type here
 
         try:
             # Establish a connection with the database and pull the relevant data
-            conn = mysql.connector.connect(host=db_host,port=db_port,database=db,user=db_user,password=db_pass, connect_timeout=5)
-            cursor = conn.cursor(dictionary=True)
-            cursor.execute(query)
-            rows = cursor.fetchall()
-
-            return rows
-        
+            pool = await aiomysql.create_pool(host=db_host,port=db_port,db=db,user=db_user,password=db_pass, connect_timeout=5)
+            async with pool.acquire() as conn:
+                async with conn.cursor(aiomysql.DictCursor) as cur:
+                    await cur.execute(query)
+                    rows = cur.fetchall()
+                    return rows.result()
+            
         except:
             raise 
 
         finally:
-            if cursor is not None:
-                cursor.close()  
-            if conn is not None:
-                conn.close()
+            if pool is not None:
+                pool.close()
+                await pool.wait_closed()
