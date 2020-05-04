@@ -455,8 +455,13 @@ class GetNotes(BaseCog):
             message = await ctx.send("Checking for alts...")
             async with ctx.typing():
                 alts = await self.get_alts(ctx, ckey)
-                if len(alts) > 0:
-                    await ctx.send(f"Possible alts for {ckey}:\n> {humanize_list(alts)}")
+                alts = humanize_list(alts)
+                if len(alts) > 0 and len(alts) < 1800:
+                    await ctx.send(f"Possible alts for {ckey}:\n> {alts}")
+                elif len(alts) > 1800:
+                    await ctx.send(f"Possiible alts for {ckey}:")
+                    for page in pagify(alts, delims=[' ']):
+                        await ctx.send(f"> {page}")
                 else:
                     await ctx.send("No alts detected!")
                 await message.delete() #Deleting over editing since this command can take a while
