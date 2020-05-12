@@ -474,7 +474,7 @@ class GetNotes(BaseCog):
             await ctx.send(embed=embed)
             return await message.delete() #^
         
-        except GeneratorExit:
+        except RuntimeError:
             embed=discord.Embed(title=f"Error looking up alts", description="Please check your entry and try again!", color=0xff0000)
             await ctx.send(embed=embed)
             return await message.delete() #^
@@ -519,7 +519,7 @@ class GetNotes(BaseCog):
 
             return caught_alts
 
-        except GeneratorExit:
+        except RuntimeError:
             raise
 
 
