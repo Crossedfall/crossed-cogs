@@ -12,7 +12,7 @@ import discord
 
 #Redbot Imports
 from redbot.core import commands, checks, Config
-from redbot.core.utils.chat_formatting import pagify, box, humanize_list
+from redbot.core.utils.chat_formatting import pagify, box, humanize_list, warning
 from redbot.core.utils.menus import menu, DEFAULT_CONTROLS
 
 #Util Imports
@@ -445,22 +445,24 @@ class GetNotes(BaseCog):
     
     @checks.mod()
     @commands.command()
-    async def alts(self, ctx, ckey:str):
+    async def alts(self, ctx, ckey:str, check_ips:bool = True):
         """
         Search for a list of possible alt accounts
 
         This command can take a long time if there are a lot of alt accounts or if your connections table is very large!
         """
         try:
+            if check_ips == False:
+                await ctx.send(f"{warning('IP check bypassed')}")
             message = await ctx.send("Checking for alts...")
             async with ctx.typing():
-                alts = await self.get_alts(ctx, ckey)
+                alts = await self.get_alts(ctx, ckey, check_ips)
                 if len(alts) > 0:
                     alts = humanize_list(alts)
                     if len(alts) < 1800:
                         await ctx.send(f"Possible alts for {ckey}:\n> {alts}")
                     else:
-                        await ctx.send(f"Possiible alts for {ckey}:")
+                        await ctx.send(f"Possible alts for {ckey}:")
                         for page in pagify(alts, delims=[' ']):
                             await ctx.send(f"> {page}")
                 else:
@@ -478,7 +480,7 @@ class GetNotes(BaseCog):
             return await message.delete() #^
 
 
-    async def get_alts(self, ctx, target:str) -> list:
+    async def get_alts(self, ctx, target:str, check_ips:bool) -> list:
         """Performs a comprehensive check of the database for possible alt accounts"""
         #Credit for the original code goes to Qwerty (https://github.com/qwertyquerty)
         try:
@@ -497,7 +499,7 @@ class GetNotes(BaseCog):
                     linked = await self.query_database(ctx, f"SELECT ckey, ip, computerid FROM {prefix}connection_log WHERE ckey='{investigating[0]}'")
                 if investigating[1] == "computerid":
                     linked = await self.query_database(ctx, f"SELECT ckey, ip, computerid FROM {prefix}connection_log WHERE computerid='{investigating[0]}'")
-                if investigating[1] == "ip":
+                if investigating[1] == "ip" and check_ips is True:
                     linked = await self.query_database(ctx, f"SELECT ckey, ip, computerid FROM {prefix}connection_log WHERE ip='{investigating[0]}'")
                 
                 investigated.append(investigating)
@@ -512,7 +514,7 @@ class GetNotes(BaseCog):
                     if (link['computerid'], "computerid") not in investigated and (link['computerid'], "computerid") not in to_investigate:
                         to_investigate.append((link['computerid'], "computerid"))
 
-                    if (link['ip'], "ip") not in investigated and (link['ip'], "ip") not in to_investigate:
+                    if (link['ip'], "ip") not in investigated and (link['ip'], "ip") not in to_investigate and check_ips is True:
                         to_investigate.append((link['ip'], "ip"))
 
             return caught_alts
