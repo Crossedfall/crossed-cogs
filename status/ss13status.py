@@ -588,9 +588,9 @@ class SS13Status(commands.Cog):
                     if status is not None:
                         duration = int(*status['round_duration'])
                         duration = time.strftime('%H:%M', time.gmtime(duration))
-                        topic = f"Server info for {await self.config.server_url()}: Players: {status['players'][0]} | Map: {str.title(*status['map_name'])} | Security Level: {str.title(*status['security_level'])} | Round Duration: {duration}"
+                        topic = f"Server info for <{await self.config.server_url()}>: Players: {status['players'][0]} | Map: {str.title(*status['map_name'])} | Security Level: {str.title(*status['security_level'])} | Round Duration: {duration}"
                     else:
-                        topic = f"Server info for {await self.config.server_url()}: Offline" 
+                        topic = f"Server info for <{await self.config.server_url()}>: Offline" 
 
                     await channel.edit(topic=topic)
 
