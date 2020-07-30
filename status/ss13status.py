@@ -387,7 +387,7 @@ class SS13Status(commands.Cog):
             embed.add_field(name="Players", value=players, inline=True)
             embed.add_field(name="Admins", value=int(*data['admins']), inline=True)
             embed.add_field(name="Round Duration", value=duration, inline=True)
-            embed.add_field(name="Server Link:", value=f"{server_url}", inline=False)
+            embed.add_field(name="Server Link:", value=f"<{server_url}>", inline=False)
 
             try:
                 await self.statusmsg.delete()
