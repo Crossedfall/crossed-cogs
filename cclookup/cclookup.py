@@ -83,7 +83,7 @@ class CCLookup(BaseCog):
             await ctx.send("I am unable to connect to the CentCom API at this time.")
 
         try:
-            message.delete()
+            await message.delete()
         except discord.NotFound:
             pass
     
