@@ -216,7 +216,7 @@ class GetNotes(BaseCog):
                     continue
                 total += 1
                 notes += f"\n[{row['timestamp']} | {row['type']} by {row['adminckey']}]\n{row['text']}"
-            for note in pagify(notes):
+            for note in pagify(notes, ["\n["]):
                 embed = discord.Embed(description=box(note, lang="asciidoc"), color=0xf1d592)
                 temp_embeds.append(embed)
             max_i = len(temp_embeds)
