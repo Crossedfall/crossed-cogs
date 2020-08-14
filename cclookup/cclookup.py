@@ -44,46 +44,45 @@ class CCLookup(BaseCog):
 
         bans = await self.centcom_lookup(converted_key, active=active)
 
-        if bans is not None:
-            if not bans:
-                active_text = ""
-                if active:
-                    active_text = "active "
-                embed=discord.Embed(description=f"No {active_text}bans found for: {ckey.title()}", color=0x2b74ab)
-                return await message.edit(embed=embed, content="")
-            else:
-                bans_list = ""
-                total = 0
-                temp_embeds = []
-                embeds = []
-                expires = "Permanent"
-                for ban in bans:
-                    total += 1
-                    if 'expires' in ban:
-                        expires  = ban['expires'][:-10]
-                    bans_list += (
-                        f"\n[Banned On: {ban['bannedOn'][:-10]} - Expires: {expires}]\n"
-                        f"{ban['reason']}\n"
-                        f"{ban['type']} banned by {ban['bannedBy']} from {ban['sourceName']} ({ban['sourceRoleplayLevel']} RP)\n"
-                        "-----"
-                    )
-                for ban in pagify(bans_list, ["[Banned On:"]):
-                    embed = discord.Embed(description=box(ban, lang="asciidoc"), color=0x2b74ab)
-                    temp_embeds.append(embed)
-                max_i = len(temp_embeds)
-                i = 1
-                for embed in temp_embeds:
-                    embed.set_author(name=f"Bans for {ckey.title()} | total bans: {total}")
-                    embed.set_footer(text=f"Page {i}/{max_i}")
-                    embeds.append(embed)
-                    i += 1
-                await menu(ctx, embeds, DEFAULT_CONTROLS)
-
-        else:
-            await ctx.send("I am unable to connect to the CentCom API at this time.")
-
         try:
-            await message.delete()
+            if bans is not None:
+                if not bans:
+                    active_text = ""
+                    if active:
+                        active_text = "active "
+                    embed=discord.Embed(description=f"No {active_text}bans found for: {ckey.title()}", color=0x2b74ab)
+                    return await message.edit(embed=embed, content="")
+                else:
+                    bans_list = ""
+                    total = 0
+                    temp_embeds = []
+                    embeds = []
+                    expires = "Permanent"
+                    for ban in bans:
+                        total += 1
+                        if 'expires' in ban:
+                            expires  = ban['expires'][:-10]
+                        bans_list += (
+                            f"\n[Banned On: {ban['bannedOn'][:-10]} - Expires: {expires}]\n"
+                            f"{ban['reason']}\n"
+                            f"{ban['type']} banned by {ban['bannedBy']} from {ban['sourceName']} ({ban['sourceRoleplayLevel']} RP)\n"
+                            "-----"
+                        )
+                    for ban in pagify(bans_list, ["[Banned On:"]):
+                        embed = discord.Embed(description=box(ban, lang="asciidoc"), color=0x2b74ab)
+                        temp_embeds.append(embed)
+                    max_i = len(temp_embeds)
+                    i = 1
+                    for embed in temp_embeds:
+                        embed.set_author(name=f"Bans for {ckey.title()} | total bans: {total}")
+                        embed.set_footer(text=f"Page {i}/{max_i}")
+                        embeds.append(embed)
+                        i += 1
+                    await message.delete()
+                    await menu(ctx, embeds, DEFAULT_CONTROLS)
+            else:
+                await message.delete()
+                await ctx.send("I am unable to connect to the CentCom API at this time.")
         except discord.NotFound:
             pass
     
@@ -109,6 +108,8 @@ class CCLookup(BaseCog):
         Performs the full lookup of a given ckey with added optional parameters for active bans and specifying a source
         """
         params = ""
+        max_attempts = 3
+        attempt = 0
 
         if active is True:
             params = "?onlyActive=True"
@@ -118,16 +119,22 @@ class CCLookup(BaseCog):
         #   <processing to determine source ID>
         #   params += "?source={ID}"
 
-        try:
-            async with httpx.AsyncClient() as client:
-                r = await client.get(f'{self.api_url}/ban/search/{ckey}{params}')
-            
-            if r.status_code == 200:
-                return r.json()
-            else:
-                return None
-        except (httpx._exceptions.ConnectTimeout, httpx._exceptions.HTTPError):
-            return None
+        while max_attempts > attempt: #httpx doesn't support retries, so we'll build our own basic loop for that
+            try:
+                async with httpx.AsyncClient() as client:
+                    r = await client.get(f'{self.api_url}/ban/search/{ckey}{params}')
+                
+                if r.status_code == 200:
+                    return r.json()
+                else:
+                    attempt +=1
+                await asyncio.sleep(5)
+            except (httpx._exceptions.ConnectTimeout, httpx._exceptions.HTTPError):
+                attempt += 1
+                await asyncio.sleep(5)
+                pass
+        
+        return None
 
     async def centcom_server_list(self) -> list:
         """
