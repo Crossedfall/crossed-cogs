@@ -31,7 +31,7 @@ class CCLookup(BaseCog):
     @commands.max_concurrency(10, wait=True)
     async def centcom(self, ctx, ckey: str, active = False):
         """
-        Checks the shared CentCom database for inforamtion on a given ckey
+        Checks the shared CentCom database for information on a given ckey
 
         Add "True" to the command if you'd like to only search through active bans. By default, this command will provide all bans
 
