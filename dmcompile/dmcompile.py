@@ -17,8 +17,9 @@ from redbot.core.utils.chat_formatting import box, escape
 CODE_BLOCK_RE = re.compile(r"^((```.*)(?=\s)|(```))")
 ERROR_PATTERN = re.compile(r'\ntest\.dmb.\S.(\d*)\s(error)')
 WARNING_PATTERN = re.compile(r'\ntest\.dmb.\S.\d*\serrors,\s(\d*).(warning.)')
+INCLUDE_PATTERN = re.compile(r'#(|\W+)include')
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __author__ = "Crossedfall"
 
 BaseCog = getattr(commands, "Cog", object)
@@ -106,6 +107,8 @@ class DMCompile(BaseCog):
         code = self.cleanup_code(utils.chat_formatting.escape(code))
         if code is None:
             return await ctx.send("Your code has to be in a code block!")
+        if INCLUDE_PATTERN.search(code) is not None:
+            return await ctx.send("You can't have any `#include` statements in your code.")
             
         try:
             message = await ctx.send("Compiling....")
