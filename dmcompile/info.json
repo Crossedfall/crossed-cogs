@@ -1,0 +1,10 @@
+{
+    "author": ["Crossedfall (Crossedfall#1001)"],
+    "install_msg": "Compile and test DM code!",
+    "name": "DM Compiler",
+    "description": "Compiles test DM code",
+    "requirements": [
+        "httpx"
+    ],
+    "permissions" : ["Manage Messages", "Embed Links"]
+}

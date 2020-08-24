@@ -3,19 +3,20 @@
 
 ## Overview
 
-These are utility cogs explicitly intended for SS13 servers leveraging off of the [/TG/](https://github.com/tgstation/tgstation) codebases. The idea is to provide a clean and convenient way to push data from the game to discord all while enjoying the many other benefits of having a [Red Bot V3 instance](https://github.com/Cog-Creators/Red-DiscordBot/tree/V3/develop). These cogs may work for other codebases, however, this has not been tested and it may require some added effort during setup.
+These are utility cogs explicitly intended for SS13 servers leveraging off of the [/tg/](https://github.com/tgstation/tgstation) and [BeeStation](https://github.com/beestation/beestation-hornet) codebases. The idea is to provide a clean and convenient way to push data from the game to discord all while enjoying the many other benefits of having a [Red Bot V3 instance](https://github.com/Cog-Creators/Red-DiscordBot/tree/V3/develop). These cogs may work for other codebases, however, this has not been tested and it may require some added effort during setup.
 
-| Cog      | Description                                                  |
-| -------- | ------------------------------------------------------------ |
-| GetNotes | **Pulls player notes from an SS13 [BeeStation](https://github.com/BeeStation/BeeStation-Hornet/blob/master/SQL) schemed database**<br /><br />`setnotes` - Configuration options for the notes cog<br />`notes` -  Lists all of the notes for a given CKEY<br />`findplayer` - Searches the database for a player using their CID, IP, or CKEY and outputs an overview of the user. **Note**: It is recommended to restrict this command to admin specific channels. The results will automatically redact the CID and IP after 5-minutes. <br />`playerinfo` \| `ckey` - Player friendly version of the `findplayer` command providing basic user info without providing sensitive information like the CID or IP.<br />`alts` - Searches for possible alt accounts by comparing entries in the `connection_log` table. **Note**: This command can take a long time to complete<br /><br />*Requires: aiomysql>=0.0.20 -- `pip install aiomysql`* |
-| Status   | **Obtains the current status of a hosted SS13 round and pertinent admin pings (e.g. Ahelps, round ending events, custom pings)**<br /><br />`adminwho` - Lists the current admins on the server &ast;<br />`players` - Lists the current players on the server&ast;<br />`setstatus`  - Configuration options for the status cog<br />`status` - Displays current round information<br /><br />_&ast; Requires additional setup, see [Additional Functions](#additional-functions) for more information_ |
-| CCLookup | **Checks the shared CentCom database for information on a given ckey**<br /><br />`centcom` - Lists bans for a provided ckey<br />`ccservers` - Lists servers currently contributing to the shared ban database<br /><br />*Requires: httpx>=0.14.1 -- `pip install httpx`* |
+| Cog                     | Description                                                  |
+| ----------------------- | ------------------------------------------------------------ |
+| [GetNotes](#GetNotes)   | **Pulls player notes from an SS13 [BeeStation](https://github.com/BeeStation/BeeStation-Hornet/blob/master/SQL) schemed database**<br /><br />`setnotes` - Configuration options for the notes cog<br />`notes` -  Lists all of the notes for a given CKEY<br />`findplayer` - Searches the database for a player using their CID, IP, or CKEY and outputs an overview of the user. **Note**: It is recommended to restrict this command to admin specific channels. The results will automatically redact the CID and IP after 5-minutes. <br />`playerinfo` \| `ckey` - Player friendly version of the `findplayer` command providing basic user info without providing sensitive information like the CID or IP.<br />`alts` - Searches for possible alt accounts by comparing entries in the `connection_log` table. **Note**: This command can take a long time to complete<br /><br />*Requires: aiomysql>=0.0.20 -- `pip install aiomysql`* |
+| [Status](#Status)       | **Obtains the current status of a hosted SS13 round and pertinent admin pings (e.g. Ahelps, round ending events, custom pings)**<br /><br />`adminwho` - Lists the current admins on the server &ast;<br />`players` - Lists the current players on the server&ast;<br />`setstatus`  - Configuration options for the status cog<br />`status` - Displays current round information<br /><br />_&ast; Requires additional setup, see [Additional Functions](#additional-functions) for more information_ |
+| [CCLookup](#CCLookup)   | **Checks the shared CentCom database for information on a given ckey**<br /><br />`centcom` - Lists bans for a provided ckey<br />`ccservers` - Lists servers currently contributing to the shared ban database<br /><br />*Requires: httpx>=0.14.1 -- `pip install httpx`* |
+| [DMCompile](#DMCompile) | **Compiles and runs DM code**<br /><br />`setcompile` - DM Compiler settings<br />`listbyond` - Lists the available BYOND versions you can compile with<br />`compile` - Sends formatted code to a compilation environment and returns the results\*<br />Requires: httpx>=0.14.1 -- `pip install httpx`<br /><br />_* Requires additional setup, see [DMCompile](#DMCompile) for more information_ |
 
 ## Setup
 
-### Redbot:
+### RedBot:
 
-Setup for your redbot V3 instance is a straightforward process. 
+Setup for your RedBot V3 instance is a straightforward process. 
 
 1. Add this repo/branch with `[p]repo add ss13-cogs https://github.com/crossedfall/crossed-cogs ss13/master`
 2. Install the cogs you want to use with `[p]cog install ss13-cogs getnotes` and `[p]cog install ss13-cogs status`
@@ -54,13 +55,13 @@ Once you have a database configured, you will need to provide a user that the bo
 
 --
 
-_Note:_ While the required `mysql-connector-python` package should be installed automatically.. If you get an error when using the notes cog where the `mysql-connector-python` module wasn't found, please ensure it is installed either by using your favorite terminal or (with the debug flag enabled on your bot) `[p]pipinstall mysql-connector-python` where `[p]` is your prefix.  
+_Note:_ While the required `mysql-connector-python` package should be installed automatically.. If you get an error when using the notes cog where the `mysql-connector-python` module wasn't found, please ensure it is installed either by using your favorite terminal or (with the debug flag enabled on your bot) `[p]pipinstall aiomysql` where `[p]` is your prefix.
 
 ---
 
 ### Status:
 
-The status cog operates by probing the server with a `?status` request and then parses that information out in a readable format, see the below example on how that might look.
+The status cog operates by probing the server with a `[p]status` request and then parses that information out in a readable format, see the below example on how that might look.
 
 |                      Online                       |                      Offline                      |
 | :-----------------------------------------------: | :-----------------------------------------------: |
@@ -194,7 +195,34 @@ The `[p]players` and `[p]adminwho` commands will output a list of player/admin c
 	return list2params(.)	
 ```
 
+----
 
+### CCLookup
+
+A simple lookup cog that utilizes the [CentCom shared database](https://centcom.melonmesa.com/index.html) to find bans for a given ckey. No setup required!
+
+![cclookup](https://i.imgur.com/PpQI05m.png)
+
+-----
+
+### DMCompile:
+
+The DMCompile cog parses a codeblock containing DM code, and sends it to an external environment which will compile, run, and generate an output for the provided code.
+
+In order to use this cog, you will need to either use a preestablished environment or host your own using this listener: https://github.com/BeeStation/dmcompile-listener. 
+
+Basic code can be compiled without defining a primary proc, however, advanced functions or code requiring indents must have an explicitly defined `proc/main()`. The code must be contained within a codeblock regardless of the code's complexity.
+
+<details>
+	<summary>Compiler Screenshots</summary>
+
+![standard compile](https://i.imgur.com/hv4Q5Xu.png)
+![advanced compile](https://i.imgur.com/qFYNmj5.png)
+![Using custom versions](https://i.imgur.com/evuqmAq.png)
+![Compiler Error](https://i.imgur.com/l73CmYY.png)
+![Compiler Warning](https://i.imgur.com/v4aPhWY.png)
+
+</details>
 
 ---
 
