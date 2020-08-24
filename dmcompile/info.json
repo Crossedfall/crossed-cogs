@@ -1,8 +1,8 @@
 {
     "author": ["Crossedfall (Crossedfall#1001)"],
-    "install_msg": "Compile and test DM code!",
+    "install_msg": "Thank you for installing! To use this cog, you must have a listener setup. If you don't already, be sure to read the docs here: https://github.com/Crossedfall/crossed-cogs#DMCompile",
     "name": "DM Compiler",
-    "description": "Compiles test DM code",
+    "description": "Compile and test DM code from Discord!",
     "requirements": [
         "httpx"
     ],
