@@ -3,7 +3,7 @@
 
 ## Overview
 
-These are utility cogs explicitly intended for SS13 servers leveraging off of the [/TG/](https://github.com/tgstation/tgstation) codebases. The idea is to provide a clean and convenient way to push data from the game to discord all while enjoying the many other benefits of having a [Red Bot V3 instance](https://github.com/Cog-Creators/Red-DiscordBot/tree/V3/develop). These cogs may work for other codebases, however, this has not been tested and it may require some added effort during setup.
+These are utility cogs explicitly intended for SS13 servers leveraging off of the [/tg/](https://github.com/tgstation/tgstation) and [BeeStation](https://github.com/beestation/beestation-hornet) codebases. The idea is to provide a clean and convenient way to push data from the game to discord all while enjoying the many other benefits of having a [Red Bot V3 instance](https://github.com/Cog-Creators/Red-DiscordBot/tree/V3/develop). These cogs may work for other codebases, however, this has not been tested and it may require some added effort during setup.
 
 | Cog                     | Description                                                  |
 | ----------------------- | ------------------------------------------------------------ |
@@ -14,9 +14,9 @@ These are utility cogs explicitly intended for SS13 servers leveraging off of th
 
 ## Setup
 
-### Redbot:
+### RedBot:
 
-Setup for your redbot V3 instance is a straightforward process. 
+Setup for your RedBot V3 instance is a straightforward process. 
 
 1. Add this repo/branch with `[p]repo add ss13-cogs https://github.com/crossedfall/crossed-cogs ss13/master`
 2. Install the cogs you want to use with `[p]cog install ss13-cogs getnotes` and `[p]cog install ss13-cogs status`
@@ -55,13 +55,13 @@ Once you have a database configured, you will need to provide a user that the bo
 
 --
 
-_Note:_ While the required `mysql-connector-python` package should be installed automatically.. If you get an error when using the notes cog where the `mysql-connector-python` module wasn't found, please ensure it is installed either by using your favorite terminal or (with the debug flag enabled on your bot) `[p]pipinstall mysql-connector-python` where `[p]` is your prefix.  
+_Note:_ While the required `mysql-connector-python` package should be installed automatically.. If you get an error when using the notes cog where the `mysql-connector-python` module wasn't found, please ensure it is installed either by using your favorite terminal or (with the debug flag enabled on your bot) `[p]pipinstall aiomysql` where `[p]` is your prefix.
 
 ---
 
 ### Status:
 
-The status cog operates by probing the server with a `?status` request and then parses that information out in a readable format, see the below example on how that might look.
+The status cog operates by probing the server with a `[p]status` request and then parses that information out in a readable format, see the below example on how that might look.
 
 |                      Online                       |                      Offline                      |
 | :-----------------------------------------------: | :-----------------------------------------------: |
