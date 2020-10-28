@@ -1,9 +1,9 @@
 {
     "author": ["Crossedfall (Crossedfall#1001)"],
-    "install_msg": "Be sure to configure this cog with `setckeyverification`",
-    "name": "BeeStation Discord Verification",
+    "install_msg": "Be sure to configure this cog with `ckeyauthset`",
+    "name": "CKEY Discord Verification",
     "short": "Verify ckeys in discord!",
-    "description": "Yup",
+    "description": "Allows users to link their CKEY to their Discord account and obtain roles for doing so. Used as a form of Discord user verification.",
     "permissions" : ["Manage Messages", "Embed Links", "Manage Roles"],
     "tags": [
         "Space Station 13",
