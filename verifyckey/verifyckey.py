@@ -253,10 +253,6 @@ class VerifyCkey(commands.Cog):
                 return await ctx.send(embed=embed)
             member = guild.get_member(ctx.author.id)
 
-            if guild is None:
-                embed=discord.Embed(title="Error!", description="Configuration error detected. Unable to locate the registering Discord server. Please notify an admin!", color=0xFF0000)
-                return await ctx.send(embed=embed)
-
             if f'{ctx.author.id}' not in users.keys():
                 try:
                     ckey = await self.check_ckey(identifier)
@@ -345,6 +341,7 @@ class VerifyCkey(commands.Cog):
 
             return parsed_data
         except (ConnectionRefusedError, socket.gaierror, socket.timeout) as e:
+            log.debug(f"Unable to obtain CKEY information:\n{e}")
             raise e #Server is likely offline
 
         finally:
