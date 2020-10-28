@@ -1,0 +1,15 @@
+{
+    "author": ["Crossedfall (Crossedfall#1001)"],
+    "install_msg": "Be sure to configure this cog with `setckeyverification`",
+    "name": "BeeStation Discord Verification",
+    "short": "Verify ckeys in discord!",
+    "description": "Yup",
+    "permissions" : ["Manage Messages", "Embed Links", "Manage Roles"],
+    "tags": [
+        "Space Station 13",
+        "Game",
+        "Administration",
+        "Utility",
+        "SS13"
+    ]
+}
