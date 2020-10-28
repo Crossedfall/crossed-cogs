@@ -31,8 +31,8 @@ class VerifyCkey(commands.Cog):
             "verified_users": {},
             "verify_steps": {
                 'step1':[
-                    "Step 1: Login to either Golden or Sage",
-                    "Connect to either <byond://golden.beestation13.com:7777> or <byond://sage.beestation13.com:7878> using your ckey",
+                    "Step 1: Login to the game server",
+                    "Connect to the game server using your ckey",
                     "https://cdn.discordapp.com/attachments/668027476961918976/734710785485307955/unknown.png"
                 ],
                 'step2':[
@@ -52,13 +52,13 @@ class VerifyCkey(commands.Cog):
 
     @commands.group()
     @checks.is_owner()
-    async def beeauth(self, ctx):
+    async def ckeyauthset(self, ctx):
         """
         Config settings for BeeStation's Discord verification
         """
         pass
 
-    @beeauth.command()
+    @ckeyauthset.command()
     async def server(self, ctx, host:str, port:int):
         """
         IP or DNS and port used to connect to the game server
@@ -78,7 +78,7 @@ class VerifyCkey(commands.Cog):
         except (ValueError, KeyError, AttributeError):
             await ctx.send("There was a problem setting your port. Please check to ensure you're attempting to use a port from 1024 to 65535")
 
-    @beeauth.command()
+    @ckeyauthset.command()
     async def commskey(self, ctx, key:str):
         """
         Set the comms key used to authenticate requests to the server
@@ -97,7 +97,8 @@ class VerifyCkey(commands.Cog):
             await ctx.send("Comms key set!")
     
     @commands.guild_only()
-    @beeauth.command()
+    @commands.bot_has_permissions(manage_roles=True)
+    @ckeyauthset.command()
     async def roles(self, ctx, role:discord.Role):
         """
         Set the role(s) to be given out whenever a user verifies their account
@@ -115,7 +116,7 @@ class VerifyCkey(commands.Cog):
         await self.config.guild_id.set(ctx.guild.id)
         await self.config.roles_to_add.set(roles)
 
-    @beeauth.command()
+    @ckeyauthset.command()
     async def steps(self, ctx):
         """
         Change the text/images provided by the verify command
@@ -169,6 +170,8 @@ class VerifyCkey(commands.Cog):
             
             for embed in embed_list:
                 await ctx.send(embed=embed)
+        else:
+            await ctx.send("Understood! The steps will remain unchanged")
 
     @commands.command()
     @commands.cooldown(1, 5, commands.BucketType.user)
@@ -243,6 +246,8 @@ class VerifyCkey(commands.Cog):
                         await ctx.send(f"That identifier doesn't seem to exist. Please check the steps in `{ctx.prefix}verify` and try again.")
                 except (ConnectionRefusedError, socket.gaierror, socket.timeout):
                     await ctx.send("There was an error connecting to the server! Please try again later. If the problem persists, contact an admin.")
+                except (discord.errors.Forbidden, discord.errors.HTTPException):
+                    await ctx.send("I was unable to add your role. Please contact an admin asking them to check my permissions.")
             else:
                 await ctx.send("You have already verified a ckey!")
     
