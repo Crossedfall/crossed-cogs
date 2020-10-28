@@ -249,6 +249,7 @@ class VerifyCkey(commands.Cog):
             guild = self.bot.get_guild(await self.config.guild_id())
             if guild is None:
                 embed=discord.Embed(title="Error!", description="Configuration error detected. Unable to locate the registering Discord server. Please notify an admin!", color=0xFF0000)
+                log.warning("Unable to locate guild. Check to ensure that a role has been set and the bot is still in the guild it came from.")
                 return await ctx.send(embed=embed)
             member = guild.get_member(ctx.author.id)
 
