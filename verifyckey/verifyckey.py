@@ -135,8 +135,12 @@ class VerifyCkey(commands.Cog):
             embed.set_image(url=f"{info[2]}")
             embed_list.append(embed)
         
-        for embed in embed_list:
-            await ctx.send(embed=embed)
+            for embed in embed_list:
+                try:
+                    await ctx.send(embed=embed)
+                except discord.errors.HTTPException:
+                    warn_embed=discord.Embed(title="Warning!", description="Unable to display step. This is most likely caused by a bad image URL. Please contact an Admin.", color=0xFF0000)
+                    await ctx.send(embed=warn_embed)
 
         await ctx.send("Would you like to change the above?")
         await self.bot.wait_for("message", check=pred_continue)
@@ -217,7 +221,11 @@ class VerifyCkey(commands.Cog):
         
         try:
             for embed in embed_list:
-                await ctx.author.send(embed=embed)        
+                try:
+                    await ctx.author.send(embed=embed) 
+                except discord.errors.HTTPException:
+                    warn_embed=discord.Embed(title="Warning!", description="Unable to display step. This is most likely caused by a bad image URL. Please contact an Admin.", color=0xFF0000)
+                    await ctx.author.send(embed=warn_embed)
             try:
                 await ctx.message.add_reaction("✅")
             except discord.errors.NotFound:
