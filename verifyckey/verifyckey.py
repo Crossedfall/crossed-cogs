@@ -3,6 +3,7 @@ import asyncio
 import socket
 import struct
 import urllib.parse
+import logging
 
 #Discord Imports
 import discord
@@ -12,8 +13,10 @@ from redbot.core import commands, checks, Config, utils
 from redbot.core.utils.chat_formatting import humanize_list
 from redbot.core.utils.predicates import MessagePredicate
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __author__ = "Crossedfall"
+
+log = logging.getLogger("red.VerifyCkey")
 
 class VerifyCkey(commands.Cog):
 
@@ -28,6 +31,7 @@ class VerifyCkey(commands.Cog):
             "comms_key": "test123",
             "guild_id": 427337870844362753,
             "roles_to_add": {},
+            "persistent_verification": False,
             "verified_users": {},
             "verify_steps": {
                 'step1':[
@@ -172,6 +176,30 @@ class VerifyCkey(commands.Cog):
                 await ctx.send(embed=embed)
         else:
             await ctx.send("Understood! The steps will remain unchanged")
+        
+    @ckeyauthset.command()
+    async def togglepersistence(self, ctx, toggle: bool = None):
+        """
+        Toggle persistent verification on/off
+
+        Setting this to True will maintain a user's verification status, even if they leave the Discord server. If the user rejoins the server,
+        they will be granted any verification roles registered with the `ckeyauthset roles` command. Requires the ability to manage roles.
+
+        Setting this to False will have the bot remove a user's verification status after leaving the Discord server.
+        """
+        if toggle is None:
+            toggle = await self.config.persistent_verification()
+            toggle = not toggle
+
+        if toggle is True:
+            if ((ctx.guild.get_member(self.bot.user.id)).guild_permissions).manage_roles: #Can the bot manage roles?
+                await self.config.persistent_verification.set(True)
+                await ctx.send("I will maintain a user's verification status, even if they leave the Discord server.")
+            else:
+                await ctx.send("It doesn't look like I can manage roles, please check my permissions and try again.")
+        else:
+            await self.config.persistent_verification.set(False)
+            await ctx.send("Users who leave the Discord server will no longer maintain their verification status.")
 
     @commands.command()
     @commands.cooldown(1, 5, commands.BucketType.user)
@@ -317,3 +345,39 @@ class VerifyCkey(commands.Cog):
 
         finally:
             conn.close()
+    
+    @commands.Cog.listener()
+    async def on_member_remove(self, member):
+        """
+        Deverify users when they leave the guild
+        """
+        persistent_check = await self.config.persistent_verification()
+        if persistent_check is True:
+            return
+        else:
+            users = await self.config.verified_users()
+            if f'{member.id}' in users.keys():
+                del users[f'{member.id}']
+                await self.config.verified_users.set(users)
+                log.debug(f"Member left the server. Removed verification status for {member.name}")
+    
+    @commands.Cog.listener()
+    async def on_member_join(self, member):
+        """
+        Re-verify users when they join the guild
+        """
+        persistent_check = await self.config.persistent_verification()
+        if persistent_check is False:
+            return
+        else:
+            users = await self.config.verified_users()
+            if f'{member.id}' in users.keys():
+                roles_dict = await self.config.roles_to_add()
+                roles_list = []
+                for role in roles_dict.keys():
+                    roles_list.append(member.guild.get_role(int(role)))
+                try:
+                    await member.add_roles(*roles_list, reason="Verified user")
+                    log.debug(f"Verified returning user {member.name}")
+                except (discord.errors.HTTPException, discord.errors.Forbidden) as e:
+                    log.warning(f"Unable to add roles to returning user {member.name}.\n{e}")
