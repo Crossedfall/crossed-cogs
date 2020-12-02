@@ -184,7 +184,7 @@ class GetNotes(BaseCog):
                         v = None
                     embed.add_field(name=f"{k}:",value=v,inline=False)
                 else:
-                    embed.add_field(name=f"{k}:",value="`redacted`",inline=False)
+                    embed.add_field(name=f"{k}:",value="`DATA EXPUNGED`",inline=False)
         await ctx.send(embed=embed)
 
 
@@ -429,7 +429,7 @@ class GetNotes(BaseCog):
 
             # After 5-minutes redact the player's CID and IP.
             await asyncio.sleep(300)
-            embed.set_field_at(0, name="__Identity:__",value=f"**CKEY**: {player['ckey']}\n**CID**: `[Redacted]`\n**IP**: `[Redacted]`\n**Account Join Date**: {player['join']}", inline=False)                    
+            embed.set_field_at(0, name="__Identity:__",value=f"**CKEY**: {player['ckey']}\n**CID**: `[DATA EXPUNGED]`\n**IP**: `[DATA EXPUNGED]`\n**Account Join Date**: {player['join']}", inline=False)                    
 
             await message.edit(content=None, embed=embed)
 
