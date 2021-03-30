@@ -97,7 +97,7 @@ class DMCompile(BaseCog):
 
         Use `listbyond` to get a list of BYOND versions you can compile with. 
         """
-        if version == '```':
+        if version.startswith('```'):
             version = "latest"
             code = f"```\n{code}"
         else:
