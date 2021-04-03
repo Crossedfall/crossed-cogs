@@ -47,7 +47,7 @@ class DMCompile(BaseCog):
         pass
 
     @setcompile.command()
-    async def listener(self, ctx, url:str = None):
+    async def listener(self, ctx, url:str):
         """
         Set the full URL for the listener
 
