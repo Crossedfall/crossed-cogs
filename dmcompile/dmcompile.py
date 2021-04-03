@@ -74,21 +74,6 @@ class DMCompile(BaseCog):
             await ctx.send(f"Default version set to: {version}")
         except (ValueError, KeyError, AttributeError):
             await ctx.send("There was an error setting the default version. Please check your entry and try again.")
-    
-    @commands.command()
-    async def listbyond(self, ctx):
-        """
-        List the available BYOND versions
-
-        List generated from the beestation/byond docker repository.
-
-        _This command also updates the internal list of available versions for the compiler._
-        """
-
-        repo_tags = await self.version_list()
-        repo_tags.remove("latest")
-        
-        await ctx.send(f"The currently available BYOND versions are:\n> {chat_formatting.humanize_list(repo_tags)}")
 
     @commands.command(usage="[version] <code>")
     async def compile(self, ctx, *, code:str):
