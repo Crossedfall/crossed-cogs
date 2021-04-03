@@ -187,7 +187,7 @@ class DMCompile(BaseCog):
                     await ctx.send(output)
                     return await message.delete()
                 else:
-                    embed = discord.Embed(description=f"**Compiler Output:**\n{box(escape(compile_log, mass_mentions=True, formatting=True))}**Execution Output:**\n{box(escape(run_log, mass_mentions=True, formatting=True))}", color=0x00ff00)
+                    embed = discord.Embed(description=f"**Execution Output:**\n{box(escape(run_log, mass_mentions=True, formatting=True))}", color=0x00ff00)
                     await ctx.send(embed=embed)
                     return await message.delete()
 
