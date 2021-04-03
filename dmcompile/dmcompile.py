@@ -32,7 +32,8 @@ class DMCompile(BaseCog):
         self.config = Config.get_conf(self, 32174327454, force_registration=True)
 
         default_config = {
-            "listener_url": "http://localhost:5000/compile"
+            "listener_url": "http://localhost:5000/compile",
+            "default_version": "514.1549"
         }
 
         self.config.register_global(**default_config)
@@ -59,6 +60,20 @@ class DMCompile(BaseCog):
             await ctx.send(f"Listener URL set to: {url}")
         except (ValueError, KeyError, AttributeError):
             await ctx.send("There was an error setting the listener's URL. Please check your entry and try again.")
+
+    @setcompile.command()
+    async def default_version(self, ctx, version:str):
+        """
+        Set the default version of BYOND used
+
+        Should be similar to: 514.1549
+        """
+
+        try:
+            await self.config.default_version.set(version)
+            await ctx.send(f"Default version set to: {version}")
+        except (ValueError, KeyError, AttributeError):
+            await ctx.send("There was an error setting the default version. Please check your entry and try again.")
     
     @commands.command()
     async def listbyond(self, ctx):
@@ -75,35 +90,45 @@ class DMCompile(BaseCog):
         
         await ctx.send(f"The currently available BYOND versions are:\n> {chat_formatting.humanize_list(repo_tags)}")
 
-    @commands.command()
-    async def compile(self, ctx, version:str = "latest", *,code:str):
+    @commands.command(usage="[version] <code>")
+    async def compile(self, ctx, *, code:str):
         """
         Compile and run DM code
 
         This command will attempt to compile and execute given DM code. It will respond with the full compile log along with any outputs given during runtime. If there are any errors during compilation, the bot will respond with a list provided by DreamMaker.
 
         The code must be contained within a codeblock, for example:
-        ```
-        world.log << 'Hello world!'
+        ```c
+        world.log << "Hello world!"
         ```
         If you're using multiple functions, or if your code requires indentation, you must define a `proc/main()` as shown below.
-        ```
+        ```c
         proc/example()
             world.log << "I'm an example function!"
 
         proc/main()
             example()
         ```
+        You can also do [p]compile `expression` to evaluate and print an expression. Example [p]compile `NORTH | EAST`.
 
-        Use `listbyond` to get a list of BYOND versions you can compile with. 
+        You can include the target BYOND version before the code block. Example: [p]compile 514.1549 `world.byond_build`
         """
-        if version.startswith('```'):
-            version = "latest"
-            code = f"```\n{code}"
-        else:
-            if version not in self.repo_tags:
-                return await ctx.send(f"That version of BYOND is not supported. Use `{ctx.prefix}listbyond` for a list of supported versions.")
-        
+        tiny_output = False
+
+        version = await self.config.default_version()
+
+        code_quote_char = '```' if '```' in code else '`'
+        if code_quote_char not in code:
+            return await ctx.send("Your code has to be in a code block!")
+        maybe_version, code = code.split(code_quote_char, 1)
+        code = code_quote_char + code
+        maybe_version = maybe_version.strip()
+        if maybe_version:
+            version = maybe_version
+
+        if code_quote_char == '`':
+            tiny_output = True
+
         code = self.cleanup_code(utils.chat_formatting.escape(code))
         if code is None:
             return await ctx.send("Your code has to be in a code block!")
@@ -132,24 +157,39 @@ class DMCompile(BaseCog):
                 run_log = r['run_log']
 
             if r['timeout']:
-                embed = discord.Embed(title="Execution timed out (30 seconds)", description=f"Compiler Output:\n{box(escape(compile_log, mass_mentions=True, formatting=True))}\nExecution Output:\n{box(escape(run_log, mass_mentions=True, formatting=True))}", color=0xd3d3d3)
-                await ctx.send(embed=embed)
-                return await message.delete()
+                if tiny_output:
+                    await ctx.send("Timed out")
+                    return await message.delete()
+                else:
+                    embed = discord.Embed(title="Execution timed out (30 seconds)", description=f"**Compiler Output:**\n{box(escape(compile_log, mass_mentions=True, formatting=True))}\n**Execution Output:**\n{box(escape(run_log, mass_mentions=True, formatting=True))}", color=0xd3d3d3)
+                    await ctx.send(embed=embed)
+                    return await message.delete()
 
             errors = ERROR_PATTERN.search(compile_log)
             warnings = WARNING_PATTERN.search(compile_log)
             if int(errors.group(1)) > 0:
-                embed = discord.Embed(title="Compilation failed!", description=f"Compiler output:\n{box(escape(compile_log, mass_mentions=True, formatting=True))}", color=0xff0000)
-                await ctx.send(embed=embed)
-                return await message.delete()
+                if tiny_output:
+                    await ctx.send("Compile error. Maybe you meant to use \\`\\`\\` instead of \\`?")
+                    return await message.delete()
+                else:
+                    embed = discord.Embed(title="Compilation failed!", description=f"Compiler output:\n{box(escape(compile_log, mass_mentions=True, formatting=True))}", color=0xff0000)
+                    await ctx.send(embed=embed)
+                    return await message.delete()
             elif int(warnings.group(1)) > 0:
-                embed = discord.Embed(title="Warnings found during compilation", description=f"Compiler Output:\n{box(escape(compile_log, mass_mentions=True, formatting=True))}\nExecution Output:\n{box(escape(run_log, mass_mentions=True, formatting=True))}", color=0xffcc00)
+                embed = discord.Embed(title="Warnings found during compilation", description=f"**Compiler Output:**\n{box(escape(compile_log, mass_mentions=True, formatting=True))}**Execution Output:**\n{box(escape(run_log, mass_mentions=True, formatting=True))}", color=0xffcc00)
                 await ctx.send(embed=embed)
                 return await message.delete()
             else:
-                embed = discord.Embed(description=f"Compiler Output:\n{box(escape(compile_log, mass_mentions=True, formatting=True))}\nExecution Output:\n{box(escape(run_log, mass_mentions=True, formatting=True))}", color=0x00ff00)
-                await ctx.send(embed=embed)
-                return await message.delete()
+                if tiny_output:
+                    output = run_log
+                    output = '\n'.join(output.split('\n')[2:]).strip()
+                    output = '`' + escape(output, mass_mentions=True, formatting=True) + '`'
+                    await ctx.send(output)
+                    return await message.delete()
+                else:
+                    embed = discord.Embed(description=f"**Compiler Output:**\n{box(escape(compile_log, mass_mentions=True, formatting=True))}**Execution Output:**\n{box(escape(run_log, mass_mentions=True, formatting=True))}", color=0x00ff00)
+                    await ctx.send(embed=embed)
+                    return await message.delete()
 
         except (httpx.NetworkError, httpx.ConnectTimeout):
             embed = discord.Embed(description=f"Error connecting to listener", color=0xff0000)
@@ -163,9 +203,12 @@ class DMCompile(BaseCog):
 
     def cleanup_code(self, content):
         """clears those pesky codeblocks"""
+        content = content.strip()
         if content.startswith("```") and content.endswith("```"):
             content = CODE_BLOCK_RE.sub("", content)[:-3]
             return content.strip('\n')
+        elif content.startswith("`") and content.endswith("`"):
+            return 'world.log << json_encode(' + content[1:-1] + ')'
         else:
             return None
 
