@@ -468,6 +468,8 @@ class SS13Status(commands.Cog):
         byondurl = await self.config.server_url()
         parser = htmlparser.HTMLParser()
 
+        log.debug("Message incoming!")
+
         if ('key' in parsed_data) and (comms_key in parsed_data['key']): #Check to ensure that we're only serving messages from our game
             if ('serverStart' in parsed_data) and (new_round_channel is not None):
                 embed = discord.Embed(title="Starting new round!", description=f"<{byondurl}>", color=0x8080ff)
@@ -550,9 +552,11 @@ class SS13Status(commands.Cog):
                         embed.set_footer(text=f"Round: {self.roundID}")
                     await admin_channel.send(embed=embed)
 
-                else: #If it's not one of the above, it's not worth serving
-                    pass
+            else: #If it's not one of the above, it's not worth serving
+                log.debug(f"The message was not something I could handle. -- {str(*parsed_data['announce'])}")
+                pass
         else:#Don't serve any messages that aren't from our game
+            log.debug(f"Message recieved but the key ({parsed_data['key']}) did not match.")
             pass
 
 
