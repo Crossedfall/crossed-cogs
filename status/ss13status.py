@@ -556,7 +556,7 @@ class SS13Status(commands.Cog):
                 log.debug(f"The message was not something I could handle. -- {str(*parsed_data['announce'])}")
                 pass
         else:#Don't serve any messages that aren't from our game
-            log.debug(f"Message recieved but the key ({parsed_data['key']}) did not match.")
+            log.debug(f"""Message recieved but {f"the key ({str(*parsed_data['announce'])}) did not match." if 'key' in parsed_data else "no key was provided."}""")
             pass
 
 
