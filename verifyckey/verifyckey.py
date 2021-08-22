@@ -1,5 +1,6 @@
 #Standard Imports
 import asyncio
+from json.decoder import JSONDecodeError
 import socket
 import struct
 import urllib.parse
@@ -8,6 +9,7 @@ import json
 
 #Discord Imports
 import discord
+from discord.ext.commands.errors import CommandInvokeError
 
 #Redbot Imports
 from redbot.core import commands, checks, Config, utils
@@ -279,10 +281,13 @@ class VerifyCkey(commands.Cog):
 
             if f'{ctx.author.id}' not in users.keys():
                 try:
-                    topic_system = await self.config.legacy_topic()
+                    topic_system = await self.config.legacy_topics()
                     ckey = await self.check_ckey(identifier, topic_system)
                     if ckey:
-                        ckey = ckey['identified_ckey'][0]
+                        if topic_system:
+                            ckey = ckey['identified_ckey'][0]
+                        else:
+                            ckey = ckey['data']['identified_ckey']
                         if ckey in users.values():
                             return await ctx.send(f"That identifier doesn't seem to exist. Please check the steps in `{ctx.prefix}verify` and try again.")
                         users[f'{ctx.author.id}'] = ckey
@@ -297,10 +302,12 @@ class VerifyCkey(commands.Cog):
                         await ctx.send(embed=embed)
                     else:
                         await ctx.send(f"That identifier doesn't seem to exist. Please check the steps in `{ctx.prefix}verify` and try again.")
-                except (ConnectionRefusedError, socket.gaierror, socket.timeout):
+                except (ConnectionRefusedError, socket.gaierror, socket.timeout, TimeoutError):
                     await ctx.send("There was an error connecting to the server! Please try again later. If the problem persists, contact an admin.")
                 except (discord.errors.Forbidden, discord.errors.HTTPException):
                     await ctx.send("I was unable to add your role. Please contact an admin asking them to check my permissions.")
+                except LookupError as e:
+                    await ctx.send(f"There appears to be an error with this cog's configuration. Please contact an admin with the following:\n`{e}`")
             else:
                 await ctx.send("You have already verified a ckey!")
     
@@ -363,7 +370,7 @@ class VerifyCkey(commands.Cog):
                 })
 
             query = b"\x00\x83" + struct.pack('>H', len(querystr) + 6) + b"\x00\x00\x00\x00\x00" + querystr.encode() + b"\x00" #Creates a packet for byond according to TG's standard
-            conn.settimeout(60) #Byond is slow, timeout set relatively high to account for any latency
+            conn.settimeout(30) #Byond is slow, timeout set relatively high to account for any latency
             conn.connect((await self.config.game_server(), await self.config.game_port())) 
 
             conn.sendall(query)
@@ -374,11 +381,16 @@ class VerifyCkey(commands.Cog):
                 parsed_data = urllib.parse.parse_qs(data[5:-1].decode())
             else:
                 parsed_data = json.loads(data[5:-1].decode())
+                if data not in parsed_data:
+                    raise LookupError(f"Bad response from server {parsed_data}")
 
             return parsed_data
-        except (ConnectionRefusedError, socket.gaierror, socket.timeout) as e:
-            log.debug(f"Unable to obtain CKEY information:\n{e}")
-            raise e #Server is likely offline
+        except (ConnectionRefusedError, socket.gaierror, socket.timeout, TimeoutError, LookupError) as e:
+            log.warning(f"Unable to obtain CKEY information:\n{e}")
+            raise e #Server is likely offline or using a different topic system
+        except json.JSONDecodeError:
+            log.warning(f"Unable to communicate with the server. It looks like we're sending updated topic requests but the server is expecting legacy requests.")
+            raise LookupError("A JSON request sent, but one was not returned. Verify that the correct topic system is set.")
 
         finally:
             conn.close()
