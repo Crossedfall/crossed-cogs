@@ -4,6 +4,7 @@ import socket
 import struct
 import urllib.parse
 import logging
+import json
 
 #Discord Imports
 import discord
@@ -26,7 +27,7 @@ class VerifyCkey(commands.Cog):
         self.config = Config.get_conf(self, 8949156131, force_registration=True)
 
         default_global = {
-            "game_server": "golden.beestation13.com",
+            "game_server": "sage.beestation13.com",
             "game_port": 1337,
             "comms_key": "test123",
             "guild_id": 427337870844362753,
@@ -49,7 +50,8 @@ class VerifyCkey(commands.Cog):
                     "Send the bot your account identification string with `?identify <string>`. **DO NOT** use this command outside of a DM. This code is unique to you and SHOULD NOT BE SHARED. Treat it like a password.\n\nAfter a short wait, your account will be verified and a new role will be granted.",
                     "https://cdn.discordapp.com/attachments/668027476961918976/734910511115665448/unknown.png"
                 ]
-            }
+            },
+            "legacy_topics": True
         }
 
         self.config.register_global(**default_global)
@@ -204,6 +206,20 @@ class VerifyCkey(commands.Cog):
         else:
             await self.config.persistent_verification.set(False)
             await ctx.send("Users who leave the Discord server will no longer maintain their verification status.")
+    
+    @ckeyauthset.command()
+    async def togglelegacy(self, ctx, toggle: bool = None):
+        """
+        Toggle between the legacy topic system and the latest version. 
+        
+        If you aren't sure which option to use, set this to True.
+        """
+        if toggle is None:
+            toggle = await self.config.legacy_topics()
+            toggle = not toggle
+        
+        await self.config.legacy_topics.set(toggle)
+        await ctx.send(f"""Understood! I will use the {"legacy" if toggle is True else "updated"} topic system to communicate with the server.""")
 
     @commands.command()
     @commands.cooldown(1, 5, commands.BucketType.user)
@@ -263,7 +279,8 @@ class VerifyCkey(commands.Cog):
 
             if f'{ctx.author.id}' not in users.keys():
                 try:
-                    ckey = await self.check_ckey(identifier)
+                    topic_system = await self.config.legacy_topic()
+                    ckey = await self.check_ckey(identifier, topic_system)
                     if ckey:
                         ckey = ckey['identified_ckey'][0]
                         if ckey in users.values():
@@ -328,14 +345,22 @@ class VerifyCkey(commands.Cog):
         else:
             await ctx.send("That user hasn't verified a ckey.")
 
-    async def check_ckey(self, uuid:str):
+    async def check_ckey(self, uuid:str, legacy: bool = None):
         """
         Verify the uuid with the server
         """
         try:
             conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
 
-            querystr = f"?key={await self.config.comms_key()}&identify_uuid&uuid={uuid}"
+            if legacy or legacy is None: # The updated topic system uses json whereas the legacy system uses standard URI formatting
+                querystr = f"?key={await self.config.comms_key()}&identify_uuid&uuid={uuid}"
+            else:
+                querystr = json.dumps({
+                    "auth": await self.config.comms_key(),
+                    "query": "identify_uuid",
+                    "uuid": uuid,
+                    "source": "Redbot - VerifyCkey"
+                })
 
             query = b"\x00\x83" + struct.pack('>H', len(querystr) + 6) + b"\x00\x00\x00\x00\x00" + querystr.encode() + b"\x00" #Creates a packet for byond according to TG's standard
             conn.settimeout(60) #Byond is slow, timeout set relatively high to account for any latency
@@ -345,7 +370,10 @@ class VerifyCkey(commands.Cog):
 
             data = conn.recv(4096) #Minimum number should be 4096, anything less will lose data
 
-            parsed_data = urllib.parse.parse_qs(data[5:-1].decode())
+            if legacy:
+                parsed_data = urllib.parse.parse_qs(data[5:-1].decode())
+            else:
+                parsed_data = json.loads(data[5:-1].decode())
 
             return parsed_data
         except (ConnectionRefusedError, socket.gaierror, socket.timeout) as e:
