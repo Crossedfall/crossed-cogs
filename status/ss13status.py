@@ -1,8 +1,6 @@
 #Standard Imports
 import asyncio
-import ipaddress
 import struct
-import select
 import socket
 import urllib.parse
 import html.parser as htmlparser
@@ -10,12 +8,13 @@ import time
 import textwrap
 from datetime import datetime
 import logging
+import json
 
 #Discord Imports
 import discord
 
 #Redbot Imports
-from redbot.core import commands, checks, Config, utils
+from redbot.core import commands, checks, Config
 
 __version__ = "1.1.0"
 __author__ = "Crossedfall"
@@ -47,6 +46,7 @@ class SS13Status(commands.Cog):
             "listen_port": 8081,
             "timeout": 10,
             "topic_toggle": False,
+            "legacy_topics": True
         }
 
         self.config.register_global(**default_global)
@@ -287,6 +287,21 @@ class SS13Status(commands.Cog):
         
         await ctx.send(embed=embed)
 
+    @setstatus.command()
+    async def togglelegacy(self, ctx, toggle: bool = None):
+        """
+        Toggle between the legacy topic system and the latest version. 
+        
+        If you aren't sure which option to use, set this to True.
+        """
+        if toggle is None:
+            toggle = await self.config.legacy_topics()
+            toggle = not toggle
+        
+        await self.config.legacy_topics.set(toggle)
+        await ctx.send(f"""Understood! I will use the {"legacy" if toggle is True else "updated"} topic system to communicate with the server.""")
+
+
     @commands.guild_only()
     @commands.command()
     async def players(self, ctx):
@@ -296,7 +311,8 @@ class SS13Status(commands.Cog):
         port = await self.config.game_port()
         try:
             server = socket.gethostbyname(await self.config.server())
-            data = await self.query_server(server,port,"?whoIs")
+            topic_system = await self.config.legacy_topics()
+            data = await self.query_server(server, port, "?whoIs", topic_system)
         except TypeError:
             await ctx.send(f"Failed to get players. Check that you have fully configured this cog using `{ctx.prefix}setstatus`.")
             return
@@ -322,7 +338,8 @@ class SS13Status(commands.Cog):
         port = await self.config.game_port()
         try:
             server = socket.gethostbyname(await self.config.server())
-            data = await self.query_server(server,port,"?getAdmins")
+            topic_system = await self.config.legacy_topics()
+            data = await self.query_server(server, port, "?getAdmins", topic_system)
         except TypeError:
             await ctx.send(f"Failed to get admins. Check that you have fully configured this cog using `{ctx.prefix}setstatus`.")
             return
@@ -353,10 +370,12 @@ class SS13Status(commands.Cog):
         server_url = await self.config.server_url()
         try:
             server = socket.gethostbyname(await self.config.server())
-            data = await self.query_server(server, port)
+            topic_system = await self.config.legacy_topics()
+            data = await self.query_server(server, port, legacy=topic_system)
         except TypeError:
-            await ctx.send(f"Failed to get the server's status. Check that you have fully configured this cog using `{ctx.prefix}setstatus`.")
-            return 
+            return await ctx.send(f"Failed to get the server's status. Check that you have fully configured this cog using `{ctx.prefix}setstatus`.")
+        except LookupError as e:
+            return await ctx.send(f"There appears to be an error with this cog's configuration. Please contact an admin with the following:\n`{e}`")
 
         if not data: #Server is not responding, send the offline message
             embed=discord.Embed(title="__Server Status:__", description=f"{msg}", color=0xff0000)
@@ -364,28 +383,29 @@ class SS13Status(commands.Cog):
 
         else:
             #Reported time is in seconds, we need to convert that to be easily understood
-            duration = int(*data['round_duration'])
+            duration = int(data['round_duration'])
             duration = time.strftime('%H:%M', time.gmtime(duration))
             #Players also includes the number of admins, so we need to do some quick math
-            players = (int(*data['players']) - int(*data['admins'])) 
+            players = (int(data['players']) - int(data['admins'])) 
             #Format long map names
-            mapname = str.title(*data['map_name'])
+            mapname = str.title(data['map_name'])
             mapname = '\n'.join(textwrap.wrap(mapname,25))
+
 
             #Might make the embed configurable at a later date
 
             embed=discord.Embed(color=0x26eaea)
             embed.add_field(name="Map", value=mapname, inline=True)
-            embed.add_field(name="Security Level", value=str.title(*data['security_level']), inline=True)
+            embed.add_field(name="Security Level", value=str.title(data['security_level']), inline=True)
             if  "shuttle_mode" in data:
                 if ("docked" or "call") not in data['shuttle_mode']:
-                    embed.add_field(name="Shuttle Status", value=str.title(*data['shuttle_mode']), inline=True)
+                    embed.add_field(name="Shuttle Status", value=str.title(data['shuttle_mode']), inline=True)
                 else:
-                    embed.add_field(name="Shuttle Timer", value=time.strftime('%M:%S', time.gmtime(int(*data['shuttle_timer']))), inline=True)
+                    embed.add_field(name="Shuttle Timer", value=time.strftime('%M:%S', time.gmtime(int(data['shuttle_timer']))), inline=True)
             else:
                 embed.add_field(name="Shuttle Status", value="Refueling", inline=True)
             embed.add_field(name="Players", value=players, inline=True)
-            embed.add_field(name="Admins", value=int(*data['admins']), inline=True)
+            embed.add_field(name="Admins", value=int(data['admins']), inline=True)
             embed.add_field(name="Round Duration", value=duration, inline=True)
             embed.add_field(name="Server Link:", value=f"<{server_url}>", inline=False)
 
@@ -396,14 +416,21 @@ class SS13Status(commands.Cog):
                 self.statusmsg = await ctx.send(embed=embed)
         
 
-    async def query_server(self, game_server:str, game_port:int, querystr="?status" ) -> dict:
+    async def query_server(self, game_server:str, game_port:int, querystr: str = "?status", legacy: bool = None) -> dict:
         """
         Queries the server for information
         """
         conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
 
         try:
-            query = b"\x00\x83" + struct.pack('>H', len(querystr) + 6) + b"\x00\x00\x00\x00\x00" + querystr.encode() + b"\x00" #Creates a packet for byond according to TG's standard
+            if legacy is False:
+                querystr = json.dumps({
+                    "auth": "anonymous",
+                    "query": querystr.lstrip("?"),
+                    "source": "Redbot - ss13Status"
+                })
+
+            query = b"\x00\x83" + struct.pack('>H', len(querystr) + 6) + b"\x00\x00\x00\x00\x00" + querystr.encode() + b"\x00" #Creates a packet for byond according to TG's standard   
             conn.settimeout(await self.config.timeout()) #Byond is slow, timeout set relatively high to account for any latency
             conn.connect((game_server, game_port)) 
 
@@ -411,7 +438,15 @@ class SS13Status(commands.Cog):
 
             data = conn.recv(4096) #Minimum number should be 4096, anything less will lose data
 
-            parsed_data = urllib.parse.parse_qs(data[5:-1].decode())
+            if legacy or legacy is None:
+                parsed_data = urllib.parse.parse_qs(data[5:-1].decode())
+                for k,v in parsed_data.items(): #Legacy topics return a dict of lists
+                    parsed_data[k] = v[0]
+            else:
+                parsed_data = json.loads(data[5:-1].decode())
+                if 'data' not in parsed_data:
+                    raise LookupError(f"Bad response from server {parsed_data}")
+                parsed_data = parsed_data['data']
 
             return parsed_data
             """
@@ -439,8 +474,15 @@ class SS13Status(commands.Cog):
             +----------------+--------+
             """ #pylint: disable=unreachable
             
-        except (ConnectionRefusedError, socket.gaierror, socket.timeout):
+        except (ConnectionRefusedError, socket.gaierror, socket.timeout, TimeoutError) as e:
+            log.debug(f"Unable to retrieve information from the server due to:\n{e}")
             return None #Server is likely offline
+        except LookupError as e:
+            log.warning(e)
+            raise e
+        except json.JSONDecodeError:
+            log.warning(f"Unable to communicate with the server. It looks like we're sending updated topic requests but the server is expecting legacy requests.")
+            raise LookupError("A JSON request sent, but one was not returned. Verify that the correct topic system is set.")
 
         finally:
             conn.close()
@@ -571,6 +613,8 @@ class SS13Status(commands.Cog):
 
     async def server_check_loop(self): #This will be used to cache statuses later
         check_time = 300
+        error_limit = 10
+        error_counter = 0
         now = datetime.utcnow()
         while self == self.bot.get_cog("SS13Status"):
             log.debug("Starting server checks")
@@ -580,7 +624,7 @@ class SS13Status(commands.Cog):
             server = await self.config.server()
             port = await self.config.game_port()
             
-            if toggle is False or server is None or port is None or channel is None:
+            if toggle is False or server is None or port is None or channel is None or error_counter < error_limit:
                 pass
             else:
 
@@ -588,7 +632,20 @@ class SS13Status(commands.Cog):
                     log.debug("Unable to set channel topic.")
                     pass
                 else:
-                    status = await self.query_server(server, port)
+                    try:
+                        topic_system = await self.config.legacy_topics()
+                        status = await self.query_server(server, port, legacy=topic_system)
+                    except Exception as e:
+                        error_counter + 1
+                        if error_counter < error_limit:
+                            check_time = check_time + 300
+                            log.warning(f"There was an error getting the server's status. Attempting again in {check_time}. Error {error_counter} of {error_limit} before disabling checks.\n\nException:\n{e}")
+                            await asyncio.sleep(check_time)
+                            continue
+                        else:
+                            log.warning(f"Exceeded the number of status errors. Disabling server checks.\n\nException:\n{e}")
+                            break
+
                     if status is not None:
                         duration = int(*status['round_duration'])
                         duration = time.strftime('%H:%M', time.gmtime(duration))
@@ -601,4 +658,6 @@ class SS13Status(commands.Cog):
             now = datetime.utcnow()
             next_check = datetime.utcfromtimestamp(now.timestamp() + check_time)
             log.debug("Done. Next check at {}".format(next_check.strftime("%Y-%m-%d %H:%M:%S")))
+            check_time = 300
+            error_counter = 0
             await asyncio.sleep(check_time)
