@@ -636,7 +636,7 @@ class SS13Status(commands.Cog):
                         topic_system = await self.config.legacy_topics()
                         status = await self.query_server(server, port, legacy=topic_system)
                     except Exception as e:
-                        error_counter + 1
+                        error_counter = error_counter + 1
                         if error_counter < error_limit:
                             check_time = check_time + 300
                             log.warning(f"There was an error getting the server's status. Attempting again in {check_time}. Error {error_counter} of {error_limit} before disabling checks.\n\nException:\n{e}")
