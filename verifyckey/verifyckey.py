@@ -12,7 +12,7 @@ import discord
 from discord.ext.commands.errors import CommandInvokeError
 
 #Redbot Imports
-from redbot.core import commands, checks, Config, utils
+from redbot.core import commands, checks, Config
 from redbot.core.utils.chat_formatting import humanize_list
 from redbot.core.utils.predicates import MessagePredicate
 
@@ -377,11 +377,11 @@ class VerifyCkey(commands.Cog):
 
             data = conn.recv(4096) #Minimum number should be 4096, anything less will lose data
 
-            if legacy:
+            if legacy or legacy is None:
                 parsed_data = urllib.parse.parse_qs(data[5:-1].decode())
             else:
                 parsed_data = json.loads(data[5:-1].decode())
-                if data not in parsed_data:
+                if 'data' not in parsed_data:
                     raise LookupError(f"Bad response from server {parsed_data}")
 
             return parsed_data
