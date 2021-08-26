@@ -236,7 +236,61 @@ class GetNotes(BaseCog):
         except ModuleNotFoundError:
             await message.edit(content="`mysql-connector` requirement not found! Please install this requirement using `pip install mysql-connector`.")
     
-    
+    @commands.command()
+    async def mynotes(self, ctx):
+        """
+        Gets the notes for a specific player
+        """
+        users = await self.config.verified_users()
+        user = ctx.author
+        if f'{user.id}' in users.keys():
+            ckey = key_to_ckey(users[f'{user.id}'])
+        else:
+            await ctx.send("You need to verify your ckey before running this command.")
+        
+            
+        prefix = await self.config.guild(ctx.guild).mysql_prefix()
+
+        query = f"SELECT timestamp, adminckey, text, type, secret, deleted FROM {prefix}messages WHERE targetckey='{ckey.lower()}' ORDER BY timestamp DESC"
+        message = await ctx.send("Getting player notes...")
+
+        try:
+            rows = await self.query_database(ctx, query)
+            if not rows:
+                embed=discord.Embed(description=f"No notes found for: {str(ckey).title()}", color=0xf1d592)
+                return await message.edit(content=None,embed=embed)
+            # Parse the data into individual fields within an embeded message in Discord for ease of viewing
+            notes = ""
+            total = 0
+            temp_embeds = []
+            embeds = []
+            for row in rows:
+                if row['deleted'] == 1:
+                    continue
+                if row['secret'] == 1:
+                    continue
+                total += 1
+                notes += f"\n[{row['timestamp']} | {row['type']} by {row['adminckey']}]\n{row['text']}"
+            for note in pagify(notes, ["\n["]):
+                embed = discord.Embed(description=box(note, lang="asciidoc"), color=0xf1d592)
+                temp_embeds.append(embed)
+            max_i = len(temp_embeds)
+            i = 1
+            for embed in temp_embeds:
+                embed.set_author(name=f"Notes for {str(ckey).title()} | Total notes: {total}")
+                embed.set_footer(text=f"Page {i}/{max_i} | All times are server time")
+                embeds.append(embed)
+                i += 1
+            await message.delete()
+            await menu(ctx, embeds, DEFAULT_CONTROLS)
+        
+        except aiomysql.Error as err:
+            embed=discord.Embed(title=f"Error looking up notes for: {ckey}", description=f"{format(err)}", color=0xff0000)
+            await message.edit(content=None,embed=embed)
+        
+        except ModuleNotFoundError:
+            await message.edit(content="`mysql-connector` requirement not found! Please install this requirement using `pip install mysql-connector`.")
+
     async def player_search(self, ctx, ip = None, ckey = None, cid = None) -> dict:
         """
         Runs multiple database queries to obtain the player's information
