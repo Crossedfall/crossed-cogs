@@ -15,7 +15,7 @@ from redbot.core.utils.menus import menu, DEFAULT_CONTROLS
 # Util Imports
 from .util import key_to_ckey
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __author__ = "Crossedfall"
 
 BaseCog = getattr(commands, "Cog", object)
@@ -58,12 +58,15 @@ class CCLookup(BaseCog):
                     temp_embeds = []
                     embeds = []
                     expires = "Permanent"
+                    status = 'Inactive'
                     for ban in bans:
                         total += 1
                         if 'expires' in ban:
                             expires  = ban['expires'][:-10]
+                        if 'active' in ban and ban['active']:
+                            status = 'Active'
                         bans_list += (
-                            f"\n[Banned On: {ban['bannedOn'][:-10]} - Expires: {expires}]\n"
+                            f"\n[Banned On: {ban['bannedOn'][:-10]} - Expires: {expires} - Status: {status}]\n"
                             f"{ban['reason']}\n"
                             f"{ban['type']} banned by {ban['bannedBy']} from {ban['sourceName']} ({ban['sourceRoleplayLevel']} RP)\n"
                             "-----"
