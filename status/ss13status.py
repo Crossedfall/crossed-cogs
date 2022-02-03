@@ -528,7 +528,7 @@ class SS13Status(commands.Cog):
             mention_role = discord.utils.get(admin_channel.guild.roles, id=(await self.config.mention_role()))
         comms_key = await self.config.comms_key()
         byondurl = await self.config.server_url()
-        parser = htmlparser.HTMLParser()
+        parser = htmlparser
 
         log.debug("Message incoming!")
 
