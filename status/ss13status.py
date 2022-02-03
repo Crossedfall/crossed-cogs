@@ -174,6 +174,7 @@ class SS13Status(commands.Cog):
         except(ValueError, KeyError, AttributeError):
             await ctx.send("There was a problem setting the notification channel. Please check your entry and try again.")
 
+    @setstatus.command()
     async def banchannel(self, ctx, text_channel: discord.TextChannel = None):
         """
         Set the text channel for ban notifications.
