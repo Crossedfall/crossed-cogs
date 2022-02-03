@@ -41,7 +41,6 @@ class SS13Status(commands.Cog):
             "new_round_channel": None,
             "admin_notice_channel": None,
             "mentor_notice_channel": None,
-            "ban_notice_channel": None,
             "mention_role": None,
             "comms_key": "default_pwd",
             "listen_port": 8081,
@@ -174,23 +173,6 @@ class SS13Status(commands.Cog):
         except(ValueError, KeyError, AttributeError):
             await ctx.send("There was a problem setting the notification channel. Please check your entry and try again.")
 
-    async def banchannel(self, ctx, text_channel: discord.TextChannel = None):
-        """
-        Set the text channel for ban notifications.
-        
-        Use without providing a channel to reset this to None.
-        """
-        try:
-            if text_channel is not None:
-                await self.config.ban_notice_channel.set(text_channel.id)
-                await ctx.send(f"Ban notifications will be sent to: {text_channel.mention}")
-            else:
-                await self.config.ban_notice_channel.set(None)
-                await ctx.send("I will no longer provide ban notices.")
-
-        except(ValueError, KeyError, AttributeError):
-            await ctx.send("There was a problem setting the notification channel. Please check your entry and try again.")
-
     @setstatus.command()
     async def mentionrole(self, ctx, role: discord.Role = None):
         """
@@ -290,7 +272,7 @@ class SS13Status(commands.Cog):
         for k, v in settings.items():
             if k == 'comms_key': #We don't want to actively display the comms key
                 embed.add_field(name=f"{k}:", value="`redacted`", inline=False)
-            elif (k == 'new_round_channel' or k == 'admin_notice_channel' or k == 'mentor_notice_channel' or k == 'ban_notice_channel') and (v is not None): #Linkify channels
+            elif (k == 'new_round_channel' or k == 'admin_notice_channel' or k == 'mentor_notice_channel') and (v is not None): #Linkify channels
                 embed.add_field(name=f"{k}:", value=f"<#{v}>", inline=False)
             elif k == 'mention_role':
                 role = discord.utils.get(ctx.guild.roles, id=await self.config.mention_role())
@@ -521,7 +503,6 @@ class SS13Status(commands.Cog):
         ##################
         admin_channel = self.bot.get_channel(await self.config.admin_notice_channel())
         mentor_channel = self.bot.get_channel(await self.config.mentor_notice_channel())
-        ban_channel = self.bot.get_channel(await self.config.ban_notice_channel())
         new_round_channel = self.bot.get_channel(await self.config.new_round_channel())
         if admin_channel is not None:
             mention_role = discord.utils.get(admin_channel.guild.roles, id=(await self.config.mention_role()))
@@ -578,15 +559,6 @@ class SS13Status(commands.Cog):
                 if self.roundID is not None:
                     embed.set_footer(text=f"Round: {self.roundID}")
                 await mentor_channel.send(embed=embed)
-
-            elif ('announce_channel' in parsed_data) and ('ban' in parsed_data['announce_channel']) and (ban_channel is not None): #shitty copypaste cause I dunno what am doing
-                announce = str(*parsed_data['announce'])
-                ticket = announce.split('): ')
-                ticket[1] = parser.unescape(ticket[1])
-                embed = discord.Embed(title=f"{ticket[0]}):", description=ticket[1], color=0xff0000)
-                if self.roundID is not None:
-                    embed.set_footer(text=f"Round: {self.roundID}")
-                await ban_channel.send(embed=embed)
 
             elif ('announce_channel' in parsed_data) and ('admin' in parsed_data['announce_channel']) and (admin_channel is not None): #Secret messages only meant for admin eyes
                 announce = str(*parsed_data['announce'])
