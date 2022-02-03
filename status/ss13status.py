@@ -3,7 +3,7 @@ import asyncio
 import struct
 import socket
 import urllib.parse
-import html.parser as htmlparser
+import html as htmlparser
 import time
 import textwrap
 from datetime import datetime
