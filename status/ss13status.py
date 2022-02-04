@@ -582,9 +582,7 @@ class SS13Status(commands.Cog):
 
             elif ('announce_channel' in parsed_data) and ('ban' in parsed_data['announce_channel']) and (ban_channel is not None): #shitty copypaste cause I dunno what am doing
                 announce = str(*parsed_data['announce'])
-                ticket = announce.split('): ')
-                ticket[1] = parser.unescape(ticket[1])
-                embed = discord.Embed(title=f"{ticket[0]}):", description=ticket[1], color=0xff0000)
+                embed = discord.Embed(title=f"Ban Notice", description=announce, color=0xff0000)
                 if self.roundID is not None:
                     embed.set_footer(text=f"Round: {self.roundID}")
                 await ban_channel.send(embed=embed)
