@@ -1,5 +1,7 @@
 {
-    "author": ["Crossedfall (Crossedfall#1001)"],
+    "author": [
+        "Crossedfall (Crossedfall#1001)"
+    ],
     "install_msg": "Thank you for installing cclookup! Credit for the CentCom API goes to bobbahbrown (https://github.com/bobbahbrown)",
     "name": "CentCom Lookup",
     "short": "References the CentCom ban database for any entries for a given user",
@@ -7,7 +9,10 @@
         "httpx>=0.14.1"
     ],
     "description": "Checks through the CentCom ban database for any entries relating to a given user",
-    "permissions" : ["Manage Messages", "Embed Links"],
+    "permissions": [
+        "Manage Messages",
+        "Embed Links"
+    ],
     "tags": [
         "Space Station 13",
         "Game",
