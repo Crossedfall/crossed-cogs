@@ -16,7 +16,7 @@ from redbot.core.utils.menus import DEFAULT_CONTROLS, menu
 # Util Imports
 from .util import key_to_ckey
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __author__ = "Crossedfall"
 
 BaseCog = getattr(commands, "Cog", object)
