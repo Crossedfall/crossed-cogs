@@ -293,14 +293,12 @@ class GetNotes(BaseCog):
 
         results = {}
         try:
-            query = query[
-                0
-            ]  # Checks to see if a player was found, if the list is empty nothing was found so we return the empty dict.
+            # Checks to see if a player was found, if the list is empty nothing was found so we return the empty dict.
+            query = query[0]
         except IndexError:
             return None
-        results["ip"] = ipaddress.IPv4Address(
-            query["ip"]
-        )  # IP's are stored as a 32 bit integer, converting it for readability
+            # IP's are stored as a 32 bit integer, converting it for readability
+        results["ip"] = ipaddress.IPv4Address(query["ip"])
         results["cid"] = query["computerid"]
         results["ckey"] = query["ckey"]
         results["first"] = query["firstseen"]
