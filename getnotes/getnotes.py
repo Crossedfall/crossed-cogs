@@ -636,7 +636,6 @@ class GetNotes(BaseCog):
         conn = await aiomysql.connect(host=db_host, port=db_port, user=db_user, password=db_pass, db=db)
 
         async with conn.cursor(aiomysql.DictCursor) as cur:
-
             await cur.execute(query, (target))
             rows = await cur.fetchall()
 
