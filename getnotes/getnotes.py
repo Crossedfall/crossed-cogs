@@ -18,10 +18,10 @@ from redbot.core.utils.menus import DEFAULT_CONTROLS, menu
 # Util Imports
 from .util import key_to_ckey
 
-__version__ = "1.2.0"
+__version__ = "1.2.1"
 __author__ = "Crossedfall"
 
-log = logging.getLogger("red.SS13GetNotes")
+log = logging.getLogger("red.cog.SS13GetNotes")
 
 BaseCog = getattr(commands, "Cog", object)
 
@@ -195,11 +195,11 @@ class GetNotes(BaseCog):
 
         prefix = await self.config.guild(ctx.guild).mysql_prefix()
 
-        query = f"SELECT timestamp, adminckey, text, type, deleted FROM {prefix}messages WHERE targetckey='{ckey.lower()}' ORDER BY timestamp DESC"
+        query = f"SELECT timestamp, adminckey, text, type, deleted FROM {prefix}messages WHERE targetckey=%s ORDER BY timestamp DESC"
         message = await ctx.send("Getting player notes...")
 
         try:
-            rows = await self.query_database(ctx, query)
+            rows = await self.query_database(ctx.guild, query, ckey.lower())
             if not rows:
                 embed = discord.Embed(description=f"No notes found for: {str(ckey).title()}", color=0xF1D592)
                 return await message.edit(content=None, embed=embed)
@@ -243,113 +243,109 @@ class GetNotes(BaseCog):
         """
         prefix = await self.config.guild(ctx.guild).mysql_prefix()
 
+        # First query is determined by the identifier given
+        if ip:
+            # IPs are stored as a 32 bit integer in the databse. We need to convert it before doing the query.
+            query = f"SELECT ckey, firstseen, lastseen, computerid, ip, accountjoindate FROM {prefix}player WHERE ip=%s"
+            query = await self.query_database(ctx.guild, query, int(ipaddress.IPv4Address(ip)))
+        elif ckey:
+            query = (
+                f"SELECT ckey, firstseen, lastseen, computerid, ip, accountjoindate FROM {prefix}player WHERE ckey=%s"
+            )
+            query = await self.query_database(ctx.guild, query, ckey)
+        elif cid:
+            query = f"SELECT ckey, firstseen, lastseen, computerid, ip, accountjoindate FROM {prefix}player WHERE computerid=%s"
+            query = await self.query_database(ctx.guild, query, cid)
+
+        results = {}
         try:
-            # First query is determined by the identifier given
-            if ip:
-                # IPs are stored as a 32 bit integer in the databse. We need to convert it before doing the query.
-                query = f"SELECT ckey, firstseen, lastseen, computerid, ip, accountjoindate FROM {prefix}player WHERE ip='{int(ipaddress.IPv4Address(ip))}'"
-                query = await self.query_database(ctx, query)
-            elif ckey:
-                query = f"SELECT ckey, firstseen, lastseen, computerid, ip, accountjoindate FROM {prefix}player WHERE ckey='{ckey}'"
-                query = await self.query_database(ctx, query)
-            elif cid:
-                query = f"SELECT ckey, firstseen, lastseen, computerid, ip, accountjoindate FROM {prefix}player WHERE computerid='{cid}'"
-                query = await self.query_database(ctx, query)
+            query = query[
+                0
+            ]  # Checks to see if a player was found, if the list is empty nothing was found so we return the empty dict.
+        except IndexError:
+            return None
+        results["ip"] = ipaddress.IPv4Address(
+            query["ip"]
+        )  # IP's are stored as a 32 bit integer, converting it for readability
+        results["cid"] = query["computerid"]
+        results["ckey"] = query["ckey"]
+        results["first"] = query["firstseen"]
+        results["last"] = query["lastseen"]
+        results["join"] = query["accountjoindate"]
 
-            results = {}
-            try:
-                query = query[
-                    0
-                ]  # Checks to see if a player was found, if the list is empty nothing was found so we return the empty dict.
-            except IndexError:
-                return None
-            results["ip"] = ipaddress.IPv4Address(
-                query["ip"]
-            )  # IP's are stored as a 32 bit integer, converting it for readability
-            results["cid"] = query["computerid"]
-            results["ckey"] = query["ckey"]
-            results["first"] = query["firstseen"]
-            results["last"] = query["lastseen"]
-            results["join"] = query["accountjoindate"]
+        # Obtain the number of total connections
+        query = f"SELECT COUNT(*) FROM {prefix}connection_log WHERE ckey=%s"
+        query = await self.query_database(ctx.guild, query, results["ckey"])
+        results["num_connections"] = query[0]["COUNT(*)"]
 
-            # Obtain the number of total connections
-            query = f"SELECT COUNT(*) FROM {prefix}connection_log WHERE ckey='{results['ckey']}'"
-            query = await self.query_database(ctx, query)
-            results["num_connections"] = query[0]["COUNT(*)"]
+        # Obtain the number of total deaths
+        query = f"SELECT COUNT(*) FROM {prefix}death WHERE byondkey=%s"
+        query = await self.query_database(ctx.guild, query, results["ckey"])
+        results["num_deaths"] = query[0]["COUNT(*)"]
 
-            # Obtain the number of total deaths
-            query = f"SELECT COUNT(*) FROM {prefix}death WHERE byondkey='{results['ckey']}'"
-            query = await self.query_database(ctx, query)
-            results["num_deaths"] = query[0]["COUNT(*)"]
+        # Obtain role time statistics
+        query = f"SELECT job, minutes FROM {prefix}role_time WHERE ckey=%s AND (job='Ghost' OR job='Living')"
+        try:
+            query = await self.query_database(ctx.guild, query, ckey)
+        except aiomysql.Error:
+            query = None
 
-            # Obtain role time statistics
-            query = f"SELECT job, minutes FROM {prefix}role_time WHERE ckey='{ckey}' AND (job='Ghost' OR job='Living')"
-            try:
-                query = await self.query_database(ctx, query)
-            except aiomysql.Error:
-                query = None
+        if query:
+            for job in query:
+                if job["job"] == "Living":
+                    results["living_time"] = job["minutes"] // 60
+                else:
+                    results["ghost_time"] = job["minutes"] // 60
 
-            if query:
-                for job in query:
-                    if job["job"] == "Living":
-                        results["living_time"] = job["minutes"] // 60
-                    else:
-                        results["ghost_time"] = job["minutes"] // 60
-
-                if "living_time" not in results.keys():
-                    results["living_time"] = 0
-                if "ghost_time" not in results.keys():
-                    results["ghost_time"] = 0
-
-            else:
+            if "living_time" not in results.keys():
                 results["living_time"] = 0
+            if "ghost_time" not in results.keys():
                 results["ghost_time"] = 0
 
-            results["total_time"] = results["living_time"] + results["ghost_time"]
+        else:
+            results["living_time"] = 0
+            results["ghost_time"] = 0
 
-            # Obtain metacoins and antag tokens (if avaialble).
-            query = f"SELECT metacoins FROM {prefix}player WHERE ckey='{results['ckey']}'"
-            try:
-                query = await self.query_database(ctx, query)
-                results["metacoins"] = (query[0])["metacoins"]
-            except aiomysql.Error:
-                pass
+        results["total_time"] = results["living_time"] + results["ghost_time"]
 
-            query = f"SELECT antag_tokens FROM {prefix}player WHERE ckey='{results['ckey']}'"
-            try:
-                query = await self.query_database(ctx, query)
-                results["antag_tokens"] = (query[0])["antag_tokens"]
-            except aiomysql.Error:
-                pass
+        # Obtain metacoins and antag tokens (if avaialble).
+        query = f"SELECT metacoins FROM {prefix}player WHERE ckey=%s"
+        try:
+            query = await self.query_database(ctx.guild, query, results["ckey"])
+            results["metacoins"] = (query[0])["metacoins"]
+        except aiomysql.Error:
+            pass
 
-            # Obtain the number of bans and, if applicable, the last ban
-            query = (
-                f"SELECT bantime FROM {prefix}ban WHERE ckey='{results['ckey']}' GROUP BY reason ORDER BY bantime DESC"
-            )
-            query = await self.query_database(ctx, query)
-            results["num_bans"] = len(query)
-            if results["num_bans"] > 0:
-                results["latest_ban"] = list(query[0].values())[0]
-            else:
-                results["latest_ban"] = None
+        query = f"SELECT antag_tokens FROM {prefix}player WHERE ckey=%s"
+        try:
+            query = await self.query_database(ctx.guild, query, results["ckey"])
+            results["antag_tokens"] = (query[0])["antag_tokens"]
+        except aiomysql.Error:
+            pass
 
-            # Obtain the total number of notes
-            query = f"SELECT COUNT(*) FROM {prefix}messages WHERE targetckey='{results['ckey']}'"
-            query = await self.query_database(ctx, query)
-            results["notes"] = query[0]["COUNT(*)"]
+        # Obtain the number of bans and, if applicable, the last ban
+        query = f"SELECT bantime FROM {prefix}ban WHERE ckey=%s GROUP BY bantime ORDER BY bantime DESC"
+        query = await self.query_database(ctx.guild, query, results["ckey"])
+        results["num_bans"] = len(query)
+        if results["num_bans"] > 0:
+            results["latest_ban"] = list(query[0].values())[0]
+        else:
+            results["latest_ban"] = None
 
-            # Notes/Deaths per hour
-            if results["living_time"] > 0:
-                results["notes_per_hour"] = round(results["notes"] / (results["total_time"]), 3)
-                results["deaths_per_hour"] = round(results["num_deaths"] / (results["living_time"]), 2)
-            else:
-                results["notes_per_hour"] = 0
-                results["deaths_per_hour"] = 0
+        # Obtain the total number of notes
+        query = f"SELECT COUNT(*) FROM {prefix}messages WHERE targetckey=%s"
+        query = await self.query_database(ctx.guild, query, results["ckey"])
+        results["notes"] = query[0]["COUNT(*)"]
 
-            return results
+        # Notes/Deaths per hour
+        if results["living_time"] > 0:
+            results["notes_per_hour"] = round(results["notes"] / (results["total_time"]), 3)
+            results["deaths_per_hour"] = round(results["num_deaths"] / (results["living_time"]), 2)
+        else:
+            results["notes_per_hour"] = 0
+            results["deaths_per_hour"] = 0
 
-        except:
-            raise
+        return results
 
     @commands.command(aliases=["ckey"])
     async def playerinfo(self, ctx, *, ckey: str):
@@ -368,7 +364,11 @@ class GetNotes(BaseCog):
             if player is None:
                 raise ValueError
 
-            player_stats = f"**Playtime**: {player['total_time']}h ({player['living_time']}h/{player['ghost_time']}h)\n**Deaths per Hour**: {player['deaths_per_hour']}"
+            player_stats = (
+                f"**Playtime**: {player['total_time']}h ({player['living_time']}h/{player['ghost_time']}h)\n"
+                f"**Deaths per Hour**: {player['deaths_per_hour']}"
+            )
+
             if "metacoins" in player.keys():
                 player_stats += f"\n**{await self.config.guild(ctx.guild).currency_name()}**: {player['metacoins']}"
             if "antag_tokens" in player.keys():
@@ -377,7 +377,10 @@ class GetNotes(BaseCog):
             embed.add_field(name="__Player Statistics__:", value=player_stats, inline=False)
             embed.add_field(
                 name="__Connection Information:__",
-                value=f"**First Seen**: {player['first']}\n**Last Seen**: {player['last']}\n**Account Join Date**: {player['join']}\n**Number of Connections**: {player['num_connections']}",
+                value=f"**First Seen**: {player['first']}\n"
+                f"**Last Seen**: {player['last']}\n"
+                f"**Account Join Date**: {player['join']}\n"
+                f"**Number of Connections**: {player['num_connections']}",
                 inline=False,
             )
             await message.edit(content=None, embed=embed)
@@ -425,7 +428,11 @@ class GetNotes(BaseCog):
             embed = discord.Embed(color=await ctx.embed_color())
             embed.set_author(name=f"Player info for {str(player['ckey']).title()}")
 
-            player_stats = f"**Playtime**: {player['total_time']}h ({player['living_time']}h/{player['ghost_time']}h)\n**Deaths per Hour**: {player['deaths_per_hour']}"
+            player_stats = (
+                f"**Playtime**: {player['total_time']}h ({player['living_time']}h/{player['ghost_time']}h)\n"
+                f"**Deaths per Hour**: {player['deaths_per_hour']}"
+            )
+
             if "metacoins" in player.keys():
                 player_stats += f"\n**{await self.config.guild(ctx.guild).currency_name()}**: {player['metacoins']}"
             if "antag_tokens" in player.keys():
@@ -433,19 +440,27 @@ class GetNotes(BaseCog):
 
             embed.add_field(
                 name="__Identity:__",
-                value=f"**CKEY**: {player['ckey']}\n**CID**: {player['cid']}\n**IP**: {player['ip']}\n**Account Join Date**: {player['join']}",
+                value=f"**CKEY**: {player['ckey']}\n"
+                f"**CID**: {player['cid']}\n"
+                f"**IP**: {player['ip']}\n"
+                f"**Account Join Date**: {player['join']}",
                 inline=False,
             )
             embed.add_field(name="__Player Statistics__:", value=player_stats, inline=False)
             embed.add_field(
                 name="__Connection Information:__",
-                value=f"**First Seen**: {player['first']}\n**Last Seen**: {player['last']}\n**Number of Connections**: {player['num_connections']}",
+                value=f"**First Seen**: {player['first']}\n"
+                f"**Last Seen**: {player['last']}\n"
+                f"**Number of Connections**: {player['num_connections']}",
                 inline=False,
             )
 
             embed.add_field(
                 name="__Bans/Notes:__",
-                value=f"**Number of Notes**: {player['notes']}\n**Number of Bans**: {player['num_bans']}\n**Last Ban**: {player['latest_ban']}\n**Notes per Hour**: {player['notes_per_hour']}",
+                value=f"**Number of Notes**: {player['notes']}\n"
+                f"**Number of Bans**: {player['num_bans']}\n"
+                f"**Last Ban**: {player['latest_ban']}\n"
+                f"**Notes per Hour**: {player['notes_per_hour']}",
                 inline=False,
             )
 
@@ -456,7 +471,10 @@ class GetNotes(BaseCog):
             embed.set_field_at(
                 0,
                 name="__Identity:__",
-                value=f"**CKEY**: {player['ckey']}\n**CID**: `[DATA EXPUNGED]`\n**IP**: `[DATA EXPUNGED]`\n**Account Join Date**: {player['join']}",
+                value=f"**CKEY**: {player['ckey']}\n"
+                f"**CID**: `[DATA EXPUNGED]`\n"
+                f"**IP**: `[DATA EXPUNGED]`\n"
+                f"**Account Join Date**: {player['join']}",
                 inline=False,
             )
 
@@ -529,16 +547,21 @@ class GetNotes(BaseCog):
 
                 if investigating[1] == "ckey":
                     linked = await self.query_database(
-                        ctx, f"SELECT ckey, ip, computerid FROM {prefix}connection_log WHERE ckey='{investigating[0]}'"
+                        ctx.guild,
+                        f"SELECT ckey, ip, computerid FROM {prefix}connection_log WHERE ckey=%s",
+                        investigating[0],
                     )
                 if investigating[1] == "computerid":
                     linked = await self.query_database(
-                        ctx,
-                        f"SELECT ckey, ip, computerid FROM {prefix}connection_log WHERE computerid='{investigating[0]}'",
+                        ctx.guild,
+                        f"SELECT ckey, ip, computerid FROM {prefix}connection_log WHERE computerid=%s",
+                        investigating[0],
                     )
                 if investigating[1] == "ip" and check_ips is True:
                     linked = await self.query_database(
-                        ctx, f"SELECT ckey, ip, computerid FROM {prefix}connection_log WHERE ip='{investigating[0]}'"
+                        ctx.guild,
+                        f"SELECT ckey, ip, computerid FROM {prefix}connection_log WHERE ip=%s",
+                        investigating[0],
                     )
 
                 investigated.append(investigating)
@@ -568,31 +591,21 @@ class GetNotes(BaseCog):
         except RuntimeError:
             raise
 
-    async def query_database(self, ctx, query: str):
+    async def query_database(self, guild: discord.Guild, query: str, target: str):
         # Database options loaded from the config
-        db = await self.config.guild(ctx.guild).mysql_db()
-        db_host = socket.gethostbyname(await self.config.guild(ctx.guild).mysql_host())
-        db_port = await self.config.guild(ctx.guild).mysql_port()
-        db_user = await self.config.guild(ctx.guild).mysql_user()
-        db_pass = await self.config.guild(ctx.guild).mysql_password()
+        db = await self.config.guild(guild).mysql_db()
+        db_host = socket.gethostbyname(await self.config.guild(guild).mysql_host())
+        db_port = await self.config.guild(guild).mysql_port()
+        db_user = await self.config.guild(guild).mysql_user()
+        db_pass = await self.config.guild(guild).mysql_password()
 
-        pool = None  # Since the pool variables can't actually be closed if the connection isn't properly established we set a None type here
+        conn = await aiomysql.connect(host=db_host, port=db_port, user=db_user, password=db_pass, db=db)
 
-        try:
-            # Establish a connection with the database and pull the relevant data
-            pool = await aiomysql.create_pool(
-                host=db_host, port=db_port, db=db, user=db_user, password=db_pass, connect_timeout=5
-            )
-            async with pool.acquire() as conn:
-                async with conn.cursor(aiomysql.DictCursor) as cur:
-                    await cur.execute(query)
-                    rows = cur.fetchall()
-                    return rows.result()
+        async with conn.cursor(aiomysql.DictCursor) as cur:
 
-        except:
-            raise
+            await cur.execute(query, (target))
+            rows = await cur.fetchall()
 
-        finally:
-            if pool is not None:
-                pool.close()
-                await pool.wait_closed()
+        conn.close()
+
+        return rows
