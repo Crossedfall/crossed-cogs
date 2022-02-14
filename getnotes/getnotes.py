@@ -68,12 +68,12 @@ class GetNotes(BaseCog):
             await self.bot.send_to_owners(
                 "⚠__Important Change to the GetNotes Cog__⚠\n\n"
                 'The "Number of Bans" metric has changed! Previously, this number would be a tally of **ALL** bans. '
-                "In effect, this would mean that job bans would be tallied seperately instead of grouped together as a single ban. "
+                "In effect, this would mean that mass job bans would be tallied per job instead of grouped together as a single ban. "
                 "This lead to an inflated sum and a potentially misleading summary of the player. "
-                "For example, a player with a full antag role ban and one (1) server ban would have 25 bans reported. 24 individual role bans and the one (1) server ban.\n\n"
+                "For example, banning a player from all antag roles at once would result in the cog listing 24 bans instead of just a single ban.\n\n"
                 "Moving forward, bans will be grouped by when they were issued. "
-                "This means that if an admin were to issue several role bans at once, they would all be reported as a single ban. "
-                "For the previous example, using `findplayer` against the same target would now report two (2) bans instead of 25. "
+                "This means that if an admin were to issue several role bans at once, they will now be reported as a single ban by GetNotes. "
+                "For the previous example, using `findplayer` against the same target would now report one (1) ban instead of 24 bans. "
             )
 
         await self.config.config_version.set(__version__)
