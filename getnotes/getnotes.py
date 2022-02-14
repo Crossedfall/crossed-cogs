@@ -31,6 +31,10 @@ class GetNotes(BaseCog):
         self.bot = bot
         self.config = Config.get_conf(self, 3257143194, force_registration=True)
 
+        default_global = {
+            "config_version": None,
+        }
+
         default_guild = {
             "mysql_host": "127.0.0.1",
             "mysql_port": 3306,
@@ -42,8 +46,38 @@ class GetNotes(BaseCog):
             "admin_ckey": {},  # Future thing, not currently used
         }
 
+        self.config.register_global(**default_global)
         self.config.register_guild(**default_guild)
         self.loop = asyncio.get_event_loop()
+        self.loop.create_task(self.version_check())
+
+    async def version_check(self):
+        """
+        Checks the current config version and send owner notices if needed
+        """
+        config_version = await self.config.config_version()
+
+        if config_version == __version__:
+            return
+
+        # In the future I'll be able to check the new global config option for this
+        # For the first run, I'll have to check to see if any guild configs exist instead
+        configs = await self.config.all_guilds()
+
+        if configs:
+            await self.bot.send_to_owners(
+                "⚠__Important Change to the GetNotes Cog__⚠\n\n"
+                'The "Number of Bans" metric has changed! Previously, this number would be a tally of **ALL** bans. '
+                "In effect, this would mean that job bans would be tallied seperately instead of grouped together as a single ban. "
+                "This lead to an inflated sum and a potentially misleading summary of the player. "
+                "For example, a player with a full antag role ban and one (1) server ban would have 25 bans reported. 24 individual role bans and the one (1) server ban.\n\n"
+                "Moving forward, bans will be grouped by when they were issued. "
+                "This means that if an admin were to issue several role bans at once, they would all be reported as a single ban. "
+                "For the previous example, using `findplayer` against the same target would now report two (2) bans instead of 25. "
+            )
+
+        await self.config.config_version.set(__version__)
+        log.debug(f"Config version updated to {__version__}")
 
     @commands.guild_only()
     @commands.group()
