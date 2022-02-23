@@ -580,7 +580,7 @@ class SS13Status(commands.Cog):
                     embed.set_footer(text=f"Round: {self.roundID}")
                 await mentor_channel.send(embed=embed)
 
-            elif ('announce_channel' in parsed_data) and ('ban' in parsed_data['announce_channel']) and (ban_channel is not None): #shitty copypaste cause I dunno what am doing
+            elif ('announce_channel' in parsed_data) and ('ban' in parsed_data['announce_channel']) and (ban_channel is not None): #sends notice to configured channel when user gets banned
                 announce = str(*parsed_data['announce'])
                 embed = discord.Embed(title=f"Ban Notice", description=announce, color=0xff0000)
                 if self.roundID is not None:

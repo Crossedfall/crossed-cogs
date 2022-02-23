@@ -127,7 +127,18 @@ In order to process the new config option, the following entry must be added to 
 /datum/config_entry/string/bot_ip
 ```
 
-
+In order to use ban notice option, following has to be added to the code/modules/admin/sql_ban_system.dm:
+```
+SSredbot.send_discord_message("ban", "[kn] [msg][roles_to_ban[1] == "Server" ? "" : " Roles: [roles_to_ban.Join("\n")]"]\nReason: [reason]", "ticket")
+```
+Example:
+```
+var/msg = "has created a [isnull(duration) ? "permanent" : "temporary [time_message]"] [applies_to_admins ? "admin " : ""][roles_to_ban[1] == "Server" ? "server ban" : "role ban from [roles_to_ban.len] roles"] for [target]."
+	log_admin_private("[kn] [msg][roles_to_ban[1] == "Server" ? "" : " Roles: [roles_to_ban.Join(", ")]"] Reason: [reason]")
+	message_admins("[kna] [msg][roles_to_ban[1] == "Server" ? "" : " Roles: [roles_to_ban.Join("\n")]"]\nReason: [reason]")
+	SSredbot.send_discord_message("ban", "[kna] [msg][roles_to_ban[1] == "Server" ? "" : " Roles: [roles_to_ban.Join("\n")]"]\nReason: [reason]", "ticket")
+	SSredbot.send_discord_message("ban", "[kn] [msg][roles_to_ban[1] == "Server" ? "" : " Roles: [roles_to_ban.Join("\n")]"]\nReason: [reason]", "ticket")
+```
 
 #### Usage:
 
