@@ -229,7 +229,7 @@ class GetNotes(BaseCog):
 
         prefix = await self.config.guild(ctx.guild).mysql_prefix()
 
-        query = f"SELECT timestamp, adminckey, text, type, deleted FROM {prefix}messages WHERE targetckey=%s ORDER BY timestamp DESC"
+        query = f"SELECT timestamp, adminckey, text, type FROM {prefix}messages WHERE targetckey=%s AND deleted = 0 ORDER BY timestamp DESC"
         message = await ctx.send("Getting player notes...")
 
         try:
@@ -243,8 +243,6 @@ class GetNotes(BaseCog):
             temp_embeds = []
             embeds = []
             for row in rows:
-                if row["deleted"] == 1:
-                    continue
                 total += 1
                 notes += f"\n[{row['timestamp']} | {row['type']} by {row['adminckey']}]\n{row['text']}"
             for note in pagify(notes, ["\n["]):
