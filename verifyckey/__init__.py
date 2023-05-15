@@ -1,4 +1,4 @@
 from .verifyckey import VerifyCkey
 
-def setup(bot):
-    bot.add_cog(VerifyCkey(bot))
+async def setup(bot):
+    await bot.add_cog(VerifyCkey(bot))
