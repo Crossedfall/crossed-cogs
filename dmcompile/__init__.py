@@ -1,4 +1,4 @@
 from .dmcompile import DMCompile
 
-def setup(bot):
-    bot.add_cog(DMCompile(bot))
+async def setup(bot):
+    await bot.add_cog(DMCompile(bot))
