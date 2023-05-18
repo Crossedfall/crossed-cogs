@@ -96,7 +96,7 @@ class DMCompile(BaseCog):
         ```
         You can also do [p]compile `expression` to evaluate and print an expression. Example [p]compile `NORTH | EAST`.
 
-        You can include the target BYOND version before the code block. Example: [p]compile 514.1549 `world.byond_build`
+        You can include the target BYOND version before the code block. Example: [p]compile 514.1589 `world.byond_build`
         """
         tiny_output = False
 
