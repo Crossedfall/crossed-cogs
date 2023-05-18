@@ -153,13 +153,10 @@ class DMCompile(BaseCog):
             errors = ERROR_PATTERN.search(compile_log)
             warnings = WARNING_PATTERN.search(compile_log)
             if int(errors.group(1)) > 0:
-                if tiny_output:
-                    await ctx.send("Compile error. Maybe you meant to use \\`\\`\\` instead of \\`?")
-                    return await message.delete()
-                else:
-                    embed = discord.Embed(title="Compilation failed!", description=f"Compiler output:\n{box(escape(compile_log, mass_mentions=True, formatting=True))}", color=0xff0000)
-                    await ctx.send(embed=embed)
-                    return await message.delete()
+                embed = discord.Embed(title="Compilation failed!", description=f"Compiler output:\n{box(escape(compile_log, mass_mentions=True, formatting=True))}", color=0xff0000)
+                content = "Maybe you meant to use \\`\\`\\` instead of \\`?" if tiny_output else None
+                await ctx.send(content=content, embed=embed)
+                return await message.delete()
             elif int(warnings.group(1)) > 0:
                 embed = discord.Embed(title="Warnings found during compilation", description=f"**Compiler Output:**\n{box(escape(compile_log, mass_mentions=True, formatting=True))}**Execution Output:**\n{box(escape(run_log, mass_mentions=True, formatting=True))}", color=0xffcc00)
                 await ctx.send(embed=embed)
