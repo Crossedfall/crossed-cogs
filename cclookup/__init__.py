@@ -1,4 +1,5 @@
 from .cclookup import CCLookup
 
-def setup(bot):
-    bot.add_cog(CCLookup(bot))
+
+async def setup(bot):
+    await bot.add_cog(CCLookup(bot))

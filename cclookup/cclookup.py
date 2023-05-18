@@ -1,35 +1,37 @@
 # Standard Imports
 import asyncio
-
-# Extra Imports
-import httpx
+from datetime import datetime
 
 # Discord Imports
 import discord
 
+# Extra Imports
+import httpx
+
 # Redbot Imports
-from redbot.core import commands, utils
-from redbot.core.utils.chat_formatting import pagify, box, humanize_list
-from redbot.core.utils.menus import menu, DEFAULT_CONTROLS
+from redbot.core import commands
+from redbot.core.utils.chat_formatting import box, humanize_list, pagify
+from redbot.core.utils.menus import DEFAULT_CONTROLS, menu
 
 # Util Imports
 from .util import key_to_ckey
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __author__ = "Crossedfall"
 
 BaseCog = getattr(commands, "Cog", object)
 
+
 class CCLookup(BaseCog):
     def __init__(self, bot):
-        
+
         self.bot = bot
         self.api_url = "https://centcom.melonmesa.com"
 
     @commands.command()
     @commands.cooldown(1, 2)
     @commands.max_concurrency(10, wait=True)
-    async def centcom(self, ctx, ckey: str, active = False):
+    async def centcom(self, ctx, ckey: str, active=False):
         """
         Checks the shared CentCom database for information on a given ckey
 
@@ -50,7 +52,7 @@ class CCLookup(BaseCog):
                     active_text = ""
                     if active:
                         active_text = "active "
-                    embed=discord.Embed(description=f"No {active_text}bans found for: {ckey.title()}", color=0x2b74ab)
+                    embed = discord.Embed(description=f"No {active_text}bans found for: {ckey.title()}", color=0x2B74AB)
                     return await message.edit(embed=embed, content="")
                 else:
                     bans_list = ""
@@ -58,18 +60,27 @@ class CCLookup(BaseCog):
                     temp_embeds = []
                     embeds = []
                     expires = "Permanent"
+                    status = "Active"
+
                     for ban in bans:
                         total += 1
-                        if 'expires' in ban:
-                            expires  = ban['expires'][:-10]
+                        if "expires" in ban:
+                            expires = ban["expires"][:-10]
+                        if not ban["active"]:
+                            if "unbannedBy" in ban.keys():
+                                status = "Unbanned"
+                            elif expires and datetime.strptime(expires, "%Y-%m-%d").date() < datetime.now().date():
+                                status = "Expired"
+                            else:
+                                status = "Inactive"
                         bans_list += (
-                            f"\n[Banned On: {ban['bannedOn'][:-10]} - Expires: {expires}]\n"
+                            f"\n[Banned On: {ban['bannedOn'][:-10]} - Expires: {expires} - {status}]\n"
                             f"{ban['reason']}\n"
                             f"{ban['type']} banned by {ban['bannedBy']} from {ban['sourceName']} ({ban['sourceRoleplayLevel']} RP)\n"
                             "-----"
                         )
                     for ban in pagify(bans_list, ["[Banned On:"]):
-                        embed = discord.Embed(description=box(ban, lang="asciidoc"), color=0x2b74ab)
+                        embed = discord.Embed(description=box(ban, lang="asciidoc"), color=0x2B74AB)
                         temp_embeds.append(embed)
                     max_i = len(temp_embeds)
                     i = 1
@@ -85,7 +96,7 @@ class CCLookup(BaseCog):
                 await ctx.send("I am unable to connect to the CentCom API at this time.")
         except discord.NotFound:
             pass
-    
+
     @commands.command()
     @commands.cooldown(1, 2)
     @commands.max_concurrency(10, wait=True)
@@ -98,12 +109,12 @@ class CCLookup(BaseCog):
 
         if server_list is not None:
             for server in server_list:
-                server_names.append(server['name'])
+                server_names.append(server["name"])
             await ctx.send(f"The servers contributing to the CentCom ban database are: {humanize_list(server_names)}")
         else:
             await ctx.send("I am unable to get a list of servers at this time.")
 
-    async def centcom_lookup(self, ckey: str, active = False) -> list:
+    async def centcom_lookup(self, ckey: str, active=False) -> list:
         """
         Performs the full lookup of a given ckey with added optional parameters for active bans and specifying a source
         """
@@ -114,26 +125,27 @@ class CCLookup(BaseCog):
         if active is True:
             params = "?onlyActive=True"
         # ToDo add an option for 'source'
-        #---------------------------------
-        #if source.lower() != "all":
+        # ---------------------------------
+        # if source.lower() != "all":
         #   <processing to determine source ID>
         #   params += "?source={ID}"
 
-        while max_attempts > attempt: #httpx doesn't support retries, so we'll build our own basic loop for that
+        # httpx doesn't support retries, so we'll build our own basic loop for that
+        while max_attempts > attempt:
             try:
                 async with httpx.AsyncClient() as client:
-                    r = await client.get(f'{self.api_url}/ban/search/{ckey}{params}')
-                
+                    r = await client.get(f"{self.api_url}/ban/search/{ckey}{params}")
+
                 if r.status_code == 200:
                     return r.json()
                 else:
-                    attempt +=1
+                    attempt += 1
                 await asyncio.sleep(5)
             except (httpx._exceptions.ConnectTimeout, httpx._exceptions.HTTPError):
                 attempt += 1
                 await asyncio.sleep(5)
                 pass
-        
+
         return None
 
     async def centcom_server_list(self) -> list:
@@ -142,8 +154,8 @@ class CCLookup(BaseCog):
         """
         try:
             async with httpx.AsyncClient() as client:
-                r = await client.get(f'{self.api_url}/source/list')
-            
+                r = await client.get(f"{self.api_url}/source/list")
+
             if r.status_code == 200:
                 return r.json()
             else:

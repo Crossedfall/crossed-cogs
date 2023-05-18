@@ -75,6 +75,10 @@ target/
 # pyenv
 .python-version
 
+# pipenv
+Pipfile
+Pipfile.lock
+
 # celery beat schedule file
 celerybeat-schedule
 
@@ -89,6 +93,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.red
 
 # Spyder project settings
 .spyderproject

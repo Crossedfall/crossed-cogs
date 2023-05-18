@@ -312,7 +312,8 @@ class SS13Status(commands.Cog):
         try:
             server = socket.gethostbyname(await self.config.server())
             topic_system = await self.config.legacy_topics()
-            data = await self.query_server(server, port, "?whoIs", topic_system)
+            comms_key = await self.config.comms_key()
+            data = await self.query_server(server, port, "?whoIs", topic_system, comms_key)
         except TypeError:
             await ctx.send(f"Failed to get players. Check that you have fully configured this cog using `{ctx.prefix}setstatus`.")
             return
@@ -339,7 +340,8 @@ class SS13Status(commands.Cog):
         try:
             server = socket.gethostbyname(await self.config.server())
             topic_system = await self.config.legacy_topics()
-            data = await self.query_server(server, port, "?getAdmins", topic_system)
+            comms_key = await self.config.comms_key()
+            data = await self.query_server(server, port, "?getAdmins", topic_system, comms_key)
         except TypeError:
             await ctx.send(f"Failed to get admins. Check that you have fully configured this cog using `{ctx.prefix}setstatus`.")
             return
@@ -416,7 +418,7 @@ class SS13Status(commands.Cog):
                 self.statusmsg = await ctx.send(embed=embed)
         
 
-    async def query_server(self, game_server:str, game_port:int, querystr: str = "?status", legacy: bool = None) -> dict:
+    async def query_server(self, game_server:str, game_port:int, querystr: str = "?status", legacy: bool = None, key: str = "anonymous") -> dict:
         """
         Queries the server for information
         """
@@ -425,7 +427,7 @@ class SS13Status(commands.Cog):
         try:
             if legacy is False:
                 querystr = json.dumps({
-                    "auth": "anonymous",
+                    "auth": key,
                     "query": querystr.lstrip("?"),
                     "source": "Redbot - ss13Status"
                 })
