@@ -66,7 +66,7 @@ class DMCompile(BaseCog):
         """
         Set the default version of BYOND used
 
-        Should be similar to: 514.1549
+        Should be in format similar to: 514.1589
         """
 
         try:
