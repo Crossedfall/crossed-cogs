@@ -33,7 +33,7 @@ class DMCompile(BaseCog):
 
         default_config = {
             "listener_url": "http://localhost:5000/compile",
-            "default_version": "514.1549"
+            "default_version": "514.1589"
         }
 
         self.config.register_global(**default_config)
