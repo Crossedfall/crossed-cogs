@@ -1,4 +1,4 @@
 from .topmoji import Topmoji
 
-def setup(bot):
-    bot.add_cog(Topmoji(bot))
+async def setup(bot):
+    await bot.add_cog(Topmoji(bot))
