@@ -59,22 +59,26 @@ class CCLookup(BaseCog):
                     total = 0
                     temp_embeds = []
                     embeds = []
-                    expires = "Permanent"
+                    expiresstr = "Permanent"
                     status = "Active"
 
                     for ban in bans:
                         total += 1
                         if "expires" in ban:
-                            expires = ban["expires"][:-10]
+                            expires = True
+                            expiresstr = ban["expires"][:-10]
+                        else:
+                            expires = False
+                            expires = "Permanent"
                         if not ban["active"]:
                             if "unbannedBy" in ban.keys():
                                 status = "Unbanned"
-                            elif expires and datetime.strptime(expires, "%Y-%m-%d").date() < datetime.now().date():
+                            elif expires and datetime.strptime(expiresstr, "%Y-%m-%d").date() < datetime.now().date():
                                 status = "Expired"
                             else:
                                 status = "Inactive"
                         bans_list += (
-                            f"\n[Banned On: {ban['bannedOn'][:-10]} - Expires: {expires} - {status}]\n"
+                            f"\n[Banned On: {ban['bannedOn'][:-10]} - Expires: {expiresstr} - {status}]\n"
                             f"{ban['reason']}\n"
                             f"{ban['type']} banned by {ban['bannedBy']} from {ban['sourceName']} ({ban['sourceRoleplayLevel']} RP)\n"
                             "-----"
