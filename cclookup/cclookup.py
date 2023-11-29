@@ -69,7 +69,8 @@ class CCLookup(BaseCog):
                             expiresstr = ban["expires"][:-10]
                         else:
                             expires = False
-                            expires = "Permanent"
+                            expiresstr = "Permanent"
+                            status = "Active"
                         if not ban["active"]:
                             if "unbannedBy" in ban.keys():
                                 status = "Unbanned"
