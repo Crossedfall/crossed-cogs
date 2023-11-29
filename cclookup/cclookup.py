@@ -59,6 +59,7 @@ class CCLookup(BaseCog):
                     total = 0
                     temp_embeds = []
                     embeds = []
+                    expires = False
                     expiresstr = "Permanent"
                     status = "Active"
 
