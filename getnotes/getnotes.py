@@ -229,7 +229,7 @@ class GetNotes(BaseCog):
 
         prefix = await self.config.guild(ctx.guild).mysql_prefix()
 
-        query = f"SELECT timestamp, COALESCE(playtime, 0 ), adminckey, text, type FROM {prefix}messages WHERE targetckey=%s AND deleted = 0 ORDER BY timestamp DESC"
+        query = f"SELECT timestamp, COALESCE(playtime, 0 ) as playtime, adminckey, text, type FROM {prefix}messages WHERE targetckey=%s AND deleted = 0 ORDER BY timestamp DESC"
         message = await ctx.send("Getting player notes...")
 
         try:
