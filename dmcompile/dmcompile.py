@@ -123,7 +123,6 @@ class DMCompile(BaseCog):
                         r = r.json()
                 except (json.JSONDecodeError, httpx.ReadTimeout):
                     log.error("There was a problem with the response from the dmcompiler server", exc_info=True)
-                    log.debug(f"Message sent to compiler:\ncode:\n{code}\nversion:{version}")
                     embed = discord.Embed(description=f"There was a problem with the listener. Unable to retrieve any results!", color=0xff0000)
                     await ctx.send(embed=embed)
                     return await message.delete()
@@ -140,7 +139,11 @@ class DMCompile(BaseCog):
                 embed = discord.Embed(title="Execution timed out (30 seconds)", description=f"Compiler Output:\n{box(escape(compile_log, mass_mentions=True, formatting=True))}\nExecution Output:\n{box(escape(run_log, mass_mentions=True, formatting=True))}", color=0xd3d3d3)
                 await ctx.send(embed=embed)
                 return await message.delete()
-
+            if "error: inconsistent indentation" in compile_log:
+                embed = discord.Embed(title="Compilation failed!", description=f"Compiler output:\n{box(escape(compile_log, mass_mentions=True, formatting=True))}", color=0xff0000)
+                await ctx.send(embed=embed)
+                return await message.delete()
+            
             errors = ERROR_PATTERN.search(compile_log)
             warnings = WARNING_PATTERN.search(compile_log)
             if int(errors.group(1)) > 0:
@@ -163,7 +166,6 @@ class DMCompile(BaseCog):
 
         except AttributeError:
             log.error("There was a problem with the response from the dmcompiler server", exc_info=True)
-            log.debug(f"Message sent to compiler:\ncode:\n{code}\nversion:{version}")
             embed = discord.Embed(description=f"There was a problem with the listener. Unable to retrieve any results!", color=0xff0000)
             await ctx.send(embed=embed)
             return await message.delete()
