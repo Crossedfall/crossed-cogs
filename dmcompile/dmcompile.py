@@ -16,8 +16,6 @@ from redbot.core.utils import chat_formatting
 from redbot.core.utils.chat_formatting import box, escape
 
 CODE_BLOCK_RE = re.compile(r"^((```.*)(?=\s)|(```))")
-ERROR_PATTERN = re.compile(r'\ntest\.dmb.\S.(\d*)\s(error)')
-WARNING_PATTERN = re.compile(r'\ntest\.dmb.\S.\d*\serrors,\s(\d*).(warning.)')
 INCLUDE_PATTERN = re.compile(r'#(|\W+)include')
 
 __version__ = "1.1.0"
@@ -143,14 +141,15 @@ class DMCompile(BaseCog):
                 embed = discord.Embed(title="Compilation failed!", description=f"Compiler output:\n{box(escape(compile_log, mass_mentions=True, formatting=True))}", color=0xff0000)
                 await ctx.send(embed=embed)
                 return await message.delete()
-            
-            errors = ERROR_PATTERN.search(compile_log)
-            warnings = WARNING_PATTERN.search(compile_log)
-            if int(errors.group(1)) > 0:
+
+            has_error = re.search(r'(?m)^.*:\d+:error\b', compile_log)
+            has_warning = re.search(r'(?m)^.*:\d+:warning\b', compile_log)
+
+            if has_error:
                 embed = discord.Embed(title="Compilation failed!", description=f"Compiler output:\n{box(escape(compile_log, mass_mentions=True, formatting=True))}", color=0xff0000)
                 await ctx.send(embed=embed)
                 return await message.delete()
-            elif int(warnings.group(1)) > 0:
+            elif has_warning:
                 embed = discord.Embed(title="Warnings found during compilation", description=f"Compiler Output:\n{box(escape(compile_log, mass_mentions=True, formatting=True))}\nExecution Output:\n{box(escape(run_log, mass_mentions=True, formatting=True))}", color=0xffcc00)
                 await ctx.send(embed=embed)
                 return await message.delete()
