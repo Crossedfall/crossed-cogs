@@ -162,6 +162,8 @@ class DMCompile(BaseCog):
             return await message.delete()
 
         except AttributeError:
+            log.error("There was a problem with the response from the dmcompiler server", exc_info=True)
+            log.debug(f"Message sent to compiler:\ncode:\n{code}\nversion:{version}")
             embed = discord.Embed(description=f"There was a problem with the listener. Unable to retrieve any results!", color=0xff0000)
             await ctx.send(embed=embed)
             return await message.delete()
