@@ -2,6 +2,7 @@
 import asyncio
 import re
 import json
+import logging
 
 # Extra Imports
 import httpx
@@ -23,6 +24,8 @@ __version__ = "1.1.0"
 __author__ = "Crossedfall"
 
 BaseCog = getattr(commands, "Cog", object)
+
+log = logging.getLogger("red.DMCompile")
 
 class DMCompile(BaseCog):
     def __init__(self, bot):
@@ -119,6 +122,7 @@ class DMCompile(BaseCog):
                         r = await client.post(await self.config.listener_url(), json={'code_to_compile':code, 'byond_version':version}, timeout=60)
                         r = r.json()
                 except (json.JSONDecodeError, httpx.ReadTimeout):
+                    log.debug("There was a problem with the response from the dmcompiler server", exc_info=True)
                     embed = discord.Embed(description=f"There was a problem with the listener. Unable to retrieve any results!", color=0xff0000)
                     await ctx.send(embed=embed)
                     return await message.delete()
